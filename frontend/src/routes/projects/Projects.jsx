@@ -1,4 +1,4 @@
-import {Link} from "react-router-dom";
+import {Link, useLoaderData} from "react-router-dom";
 
 function ProjectEntry(props){
     return (
@@ -11,13 +11,17 @@ function ProjectEntry(props){
     )
 }
 
-function Projects() {
-    let data= [
+export function projectListLoader(){
+    return [
         {id:"1",name:"Проект1",address:"add1r",date:new Date()},
         {id:"2",name:"Проект13",address:"add4234342342342342r2",date:new Date()},
         {id:"3",name:"Проект532351",address:"ad1r",date:new Date()},
         {id:"4",name:"Проект1353",address:"add42343442342r2",date:new Date()}
     ]
+}
+
+function Projects() {
+    let data = useLoaderData()
     return (
         <div>
             <div className={"flex justify-between w-full"}>

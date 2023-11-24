@@ -3,17 +3,29 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
-import Projects from "./routes/projects/Projects.jsx";
-import Project from "./routes/project/Project.jsx";
+import Projects, {projectListLoader} from "./routes/projects/Projects.jsx";
+import Project, {projectLoader} from "./routes/project/Project.jsx";
+import Comments, {commentsLoader} from "./routes/comments/Comments.jsx";
 
 const router = createBrowserRouter([
     {
         path: "/",
         element: <Projects/>,
+        loader: projectListLoader
     },
     {
-        path: "/projects/:id",
+        path: "/projects/:pid",
         element: <Project />,
+        loader: projectLoader
+    },
+    {
+        path: "/projects/:pid/floor/:fid",
+        element: <Project />,
+    },
+    {
+        path: "/projects/:pid/comments",
+        element: <Comments />,
+        loader: commentsLoader
     },
     {
         path: "*",
