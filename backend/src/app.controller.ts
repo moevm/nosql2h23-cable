@@ -32,7 +32,7 @@ export class AppController {
   @Get("/project/:id")
   async getProject(@Param('id') id): Promise<any> {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor RETURN n, countFloor`)
-
+    console.log(response)
     const project = response.records[0].get('n').properties
     const floors = response.records[0].get('countFloor').toNumber()
 
@@ -62,14 +62,14 @@ export class AppController {
     let curId = id
     if (id == 'new') {
       curId = Date.now()
-      const response = await this.neo4jService.write(`CREATE (p:Project {id: ${curId},address: ${address},name: ${name},DateOfChange: datetime${new Date().toISOString()}})`)
+      const response = await this.neo4jService.write(`CREATE (p:Project {id: ${curId},address: "${address}",name: "${name}",DateOfChange: datetime("${new Date().toISOString()}")})`)
     }
     else
     {
-      if (name) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.name = ${name}`)
+      if (name) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.name = "${name}"`)
     }
 
-    if (address) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.address = ${address}`)
+    if (address) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.address = "${address}"`)
 
     if (floors) floors.forEach(async floor => {
       await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) 
@@ -78,7 +78,7 @@ export class AppController {
     })
 
     return {
-
+      id: curId
     }
   }
 

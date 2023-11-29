@@ -116,6 +116,7 @@ function Project(){
         axios.post(`${apiHost}/project/${pid}/save`,projectState.changed).then(x=>{
             if(x.status === 201){
                 dispatch(setSaved(true))
+                navigate(`/projects/${x.data.id}/floor/${fid}`)
             }
             else{
                 console.log("not saved")

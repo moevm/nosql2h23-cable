@@ -33,6 +33,10 @@ export const projectEditorSlice = createSlice({
         },
         initProject: (state, action) => {
             state = {...initialState}
+            state.changed={}
+            state.changed.name = state.name
+            state.changed.address = state.address
+            state.changed.floors=[{floor: 1, components: []}]
             console.log("init")
             return state
         },
