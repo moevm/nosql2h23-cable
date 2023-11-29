@@ -5,58 +5,24 @@ import { Neo4jService } from 'nest-neo4j'
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService,
-              /*private readonly neo4jService: Neo4jService*/
+              private readonly neo4jService: Neo4jService
   ) {
-  }
-
-  @Get()
-  async getHello(): Promise<any> {
-    // const res = await this.neo4jService.read(`MATCH (n) RETURN count(n) AS count`)
-
-    // return `There are ${res.records[0].get('count')} nodes in the database`
   }
 
   @Get("/projects")
   async getProjects(): Promise<any> {
-    let projects = [
-      {
-        id: "1",
-        name: "Проект1",
-        address: "add1r",
-        date: new Date().toISOString(),
-        floors: [{floor: 1, components: []}]
-      },
-      {
-        id: "2",
-        name: "Проект13",
-        address: "add4234342342342342r2",
-        date: new Date().toISOString(),
-        floors: [{floor: 1, components: []}]
-      },
-      {
-        id: "3",
-        name: "Проект532351",
-        address: "ad1r",
-        date: new Date().toISOString(),
-        floors: [{floor: 1, components: []}]
-      },
-      {
-        id: "4",
-        name: "Проект1353",
-        address: "add42343442342r2",
-        date: new Date().toISOString(),
-        floors: [{floor: 1, components: []}]
-      }
-    ]
+    const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
+
+    const projectList = response.records.map(x => x.get(0).properties)
 
     return {
       page: 1,
-      total: projects.length,
-      projects: projects.map(x => {
+      total: projectList.length,
+      projects: projectList.map(x => {
         return {
-          id: x.id,
+          id: x.id.toNumber(),
           name: x.name,
-          date: x.date,
+          date: x.DateOfChange.toStandardDate(),
           address: x.address
         }
       })
@@ -65,24 +31,18 @@ export class AppController {
 
   @Get("/project/:id")
   async getProject(@Param('id') id): Promise<any> {
+    const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor RETURN n, countFloor`)
+
+    const project = response.records[0].get('n').properties
+    const floors = response.records[0].get('countFloor').toNumber()
 
     return {
       id: id,
-      name: `Project with id ${id}`,
-      address: `Address of a project with id ${id}`,
-      date: new Date().toISOString(),
-      saved: true,
-      floors: [
-        {
-          floor: 1,
-        },
-        {
-          floor: 2,
-        },
-        {
-          floor: 3,
-        }
-      ]
+      name: project.name,
+      address: project.address,
+      date: project.DateOfChange.toStandardDate(),
+      saved: !false,
+      floors: Array.from({length: floors}, (_, i) => {return {floor: i + 1}})
     }
   }
 
@@ -90,13 +50,35 @@ export class AppController {
   async getComponents(@Param('id') id,@Param('floor') floor): Promise<any> {
     return {
       floor: +floor,
-      components:[{name:`компонент на этаже ${floor}`}]
+      components: []
     }
   }
 
   @Post("/project/:id/save")
-  async saveChanges(@Body() changes): Promise<any> {
-    console.log(changes)
-    return {}
+  async saveChanges(@Body() changes, @Param('id') id): Promise<any> {
+    const name = changes.name
+    const address = changes.address
+    const floors = changes.floors
+    let curId = id
+    if (id == 'new') {
+      curId = Date.now()
+      const response = await this.neo4jService.write(`CREATE (p:Project {id: ${curId},address: ${address},name: ${name},DateOfChange: datetime${new Date().toISOString()}})`)
+    }
+    else
+    {
+      if (name) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.name = ${name}`)
+    }
+
+    if (address) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.address = ${address}`)
+
+    if (floors) floors.forEach(async floor => {
+      await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) 
+      CREATE (p) <-[:FLOOR]- (f:Floor {number: ${floor.floor}, plan: ''})
+      `)
+    })
+
+    return {
+
+    }
   }
 }
