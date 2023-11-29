@@ -2,8 +2,8 @@ import { createSlice } from '@reduxjs/toolkit'
 
 const initialState = {
     id: undefined,
-    name: "New Project",
-    address: "",
+    name: "Новый проект",
+    address: "Адрес не указан",
     date: undefined,
     saved: false,
     floors: [

@@ -46,8 +46,6 @@ export async function projectLoader({params}){
 export async function newProjectLoader({params}){
     console.log("new")
     store.dispatch(initProject());
-    store.dispatch(setDate(new Date().toISOString()));
-    store.dispatch(setName("abc"));
     return redirect(`/projects/new/floor/1`)
 
 }
@@ -132,7 +130,7 @@ function Project(){
                 <Components components={projectLoaded?floors.find(x=>x.floor === floor).components:[]}/>
                 <CableProperties />
             </div>
-            <div style={{flex:"60%"}} className={"h-full"} >
+            <div style={{flex:"70%"}} className={"h-full"} >
                 <div className={"flex justify-between p-5"}>
                     <div  className={"flex flex-col"}>
                         <input type={"text"}
@@ -166,14 +164,22 @@ function Project(){
                     <button onClick={handleSaveButton}>Сохранить</button>
                 </div>
             </div>
-            <div style={{flex:"15%"}} className={"flex flex-col justify-center h-full"}>
-                <button onClick={(e)=>dispatch(addFloor(projectState.floors.length+1))}>+</button>
+            <div className={"w-20 flex flex-col justify-center items-center h-full gap-2"}>
+                <div>
+                    Этаж
+                </div>
+
+                <button className={"floor-button"}
+                        onClick={(e)=>dispatch(addFloor(projectState.floors.length+1))}>+</button>
                 { floors.sort((a,b)=>-a.floor+b.floor).map(x=>{
                         if (x.floor === Number(fid)) {
-                            return <button style={{backgroundColor:"blue"}}>{x.floor}</button>
+                            return <button className={"floor-button"}
+                                           style={{backgroundColor:"blue"}}>{x.floor}</button>
                         }
                         else {
-                            return <button id={(x.floor).toString()} onClick={handleFloorButton}>{x.floor}</button>
+                            return <button className={"floor-button"}
+                                           id={(x.floor).toString()}
+                                           onClick={handleFloorButton}>{x.floor}</button>
                         }
                     }
                 )
