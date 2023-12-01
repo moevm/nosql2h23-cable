@@ -1,6 +1,6 @@
 services:
-  neo4j:
-    image: neo4j
+  db:
+    image: neo4j:5.14
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -8,3 +8,7 @@ services:
       - ./data:/data
     environment:
       - NEO4J_AUTH=neo4j/password
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
