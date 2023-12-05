@@ -33,7 +33,7 @@ function Projects() {
                 </div>
                 <div  className={"flex flex-col justify-start w-1/12"}>
                     <button onClick={(e)=>navigate("/projects/new")}>+</button>
-                    <button>Импорт</button>
+                    <button onClick={(e)=>navigate("/import")}>Импорт</button>
                     <button>Экспорт</button>
                     <button>Удалить</button>
                 </div>
