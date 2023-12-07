@@ -1,14 +1,28 @@
+version: '2'
 services:
   db:
     image: neo4j:5.14
+    restart: always
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     volumes:
-      - ./data:/data
+      - data:/data
     environment:
       - NEO4J_AUTH=neo4j/password
   frontend:
     build: ./frontend
+    restart: always
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
+  backend:
+    build: ./backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - DATABASE_HOST=db
+    ports:
+      - "127.0.0.1:3000:3000"
+volumes:
+  data:

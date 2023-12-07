@@ -144,7 +144,7 @@ function Project(){
                         />
                     </div>
                     <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
-                    <button>История изменений</button>
+                    <button onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
                 <div className={"bg-gray-400  w-full p-5"}>
                     <div className={"flex justify-end w-full"}>
