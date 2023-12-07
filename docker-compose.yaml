@@ -17,7 +17,7 @@ services:
       - "127.0.0.1:8080:80"
   backend:
     build: ./backend
-    restart: always
+    restart: on-failure
     depends_on:
       - db
     environment:

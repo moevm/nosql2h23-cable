@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
-import Projects, {projectListLoader} from "./routes/projects/Projects.jsx";
+import Projects from "./routes/projects/Projects.jsx";
 import Project, {newProjectLoader, projectLoader} from "./routes/project/Project.jsx";
 import Comments, {commentsLoader} from "./routes/project/Comments.jsx";
 import {store} from "./store/store.js";
@@ -19,7 +19,6 @@ const router = createBrowserRouter([
     {
         path: "/",
         element: <Projects/>,
-        loader: projectListLoader
     },
     {
         path: "/projects/new",
