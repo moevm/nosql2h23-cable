@@ -1,6 +1,7 @@
 import {Body, Controller, Get, Param, Post, Query} from '@nestjs/common';
 import { AppService } from './app.service';
 import { Neo4jService } from 'nest-neo4j'
+import { DateTime } from 'neo4j-driver';
 
 @Controller()
 export class AppController {
@@ -10,8 +11,48 @@ export class AppController {
   }
 
   @Get("/projects")
-  async getProjects(): Promise<any> {
-    const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
+  async getProjects(@Query('mode') mode: Number, @Query('query') query: String): Promise<any> {
+    
+    let response
+    if (mode === undefined || query === "")
+    {
+      response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
+    }
+    else
+    {
+      let findString: string;
+      let dateSerch: string = new Date().toISOString()
+
+      switch (+mode)
+      {
+        case 0:
+          findString = `MATCH (n) RETURN n limit 0`
+          break
+        case 1:
+          findString = `Match (n:Project) where n.name contains "${query}" return n`
+          break
+        case 2:
+          findString = `Match (n:Project) where n.address contains "${query}" return n`
+          break
+        case 3:
+          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
+          break
+        case 4:
+          findString = `Match (n:Project) where n.DateOfChange contains datetime("${dateSerch}") return n`
+          break
+        case 5:
+          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
+          break
+        case 6:
+          findString = `Match (n:Project) where n.address contains "${query}" or n.DateOfChange contains datetime("${dateSerch}") return n`
+          break
+        case 7:
+          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" or n.DateOfChange contains datetime("${dateSerch}") return n`
+          break        
+
+      }
+      response = await this.neo4jService.read(findString)
+    }
 
     const projectList = response.records.map(x => x.get(0).properties)
 
@@ -32,7 +73,7 @@ export class AppController {
   @Get("/project/:id")
   async getProject(@Param('id') id): Promise<any> {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor RETURN n, countFloor`)
-    console.log(response)
+
     const project = response.records[0].get('n').properties
     const floors = response.records[0].get('countFloor').toNumber()
 
@@ -83,42 +124,24 @@ export class AppController {
   }
 
   @Post("/project/:id/comment")
-  async addComment(@Body() comment): Promise<any> {
-    console.log(comment.text)
+  async addComment(@Param('id') id, @Body() comment): Promise<any>
+  {
+
+    await this.neo4jService.write(`MATCH(p:Project {id: ${id}}) 
+      CREATE (p) <-[:COMMENT]- (c:Comment {comment_id: ${Date.now()}, comment_text: "${comment.text}", comment_date: datetime("${new Date().toISOString()}")})
+      `)
+
     return {date: new Date().toISOString(),text:comment.text}
   }
-  @Get("/project/:id/comments")
-  async getComments(): Promise<any> {
 
-    return {comments:[{date:new Date(),text:"Because you can return or throw responses in loaders and actions, you can use redirect to redirect to another route.\n" +
-            "\n" +
-            "import { redirect } from \"react-router-dom\";\n" +
-            "\n" +
-            "const loader = async () => {\n" +
-            "  const user = await getUser();\n" +
-            "  if (!user) {\n" +
-            "    return redirect(\"/login\");\n" +
-            "  }\n" +
-            "  return null;\n" +
-            "};\n" +
-            "It's really just a shortcut for this:\n" +
-            "\n" +
-            "new Response(\"\", {\n" +
-            "  status: 302,\n" +
-            "  headers: {\n" +
-            "    Location: someUrl,\n" +
-            "  },\n" +
-            "});\n" +
-            "It's recommended to use redirect in loaders and actions rather than useNavigate in your components when the redirect is in response to data.\n" +
-            "\n" +
-            "See also:"},
-        {date:new Date(),text:"234"},
-        {
-          date:new Date(),text:"Что нужно заложить под натяжной потолок, чтобы после его не пришлось снимать? В моих ремонтах вы часто видите натяжные потолки, на которые установлены светильники, гардины и даже рельсы шкафа-купе, а потолки при этом не прогибаются и на них не образуются складки. Сегодня расскажу, как мы это делаем:)"
-        },
-        {
-          date:new Date(),text:"1) Закладные под декоративные перегородки. Как правило, мы добавляем эти закладные, если у заказчика разнополые дети и нам через несколько лет нужно будет разделить детскую комнату на две зоны. Как правило, для этих целей мы используем лёгкие ажурные конструкции, которые не перекрывают световой поток, но при этом зонируют комнату. При этом, мы заранее определяем габариты и сечение будущих перегородок, чтобы установить закладные соответствующего размера. "
-        }
-      ]}
+  @Get("/project/:id/comments")
+  async getComments(@Param('id') id): Promise<any>
+  {
+    const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) RETURN c`)
+    const listOfComments = response.records.map(x => x.get(0).properties)
+    console.log(listOfComments)
+    return {
+      comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
+    }
   }
 }
