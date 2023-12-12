@@ -22,6 +22,8 @@ export class AppController {
     {
       let findString: string;
 
+      let timzone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
       switch (+mode)
       {
         case 0:
@@ -37,16 +39,16 @@ export class AppController {
           findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
           break
         case 4:
-          findString = `Match (n:Project) where toString(n.DateOfChange) contains "${query}" return n`
+          findString = `Match (n:Project) where toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
           break
         case 5:
           findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
           break
         case 6:
-          findString = `Match (n:Project) where n.address contains "${query}" or toString(n.DateOfChange) contains "${query}" return n`
+          findString = `Match (n:Project) where n.address contains "${query}" or toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
           break
         case 7:
-          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" or toString(n.DateOfChange) contains "${query}" return n`
+          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" or toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
           break        
 
       }
