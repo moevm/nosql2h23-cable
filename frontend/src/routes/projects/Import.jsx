@@ -25,6 +25,8 @@ export default function (){
         };
         axios.post(url, formData, config).then((response) => {
             console.log(response.data);
+        }).catch(x=>{
+            console.log("import error")
         });
 
     }
