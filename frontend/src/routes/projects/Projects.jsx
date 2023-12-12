@@ -71,7 +71,8 @@ function Projects() {
             setExportMode(true)
         }
         else {
-            console.log("export",{projects: selected})
+            axios.post(`${apiHost}/projects/export`,{projects: selected}).then()
+
         }
     }
     let deleteHandler = ()=>{
