@@ -2,12 +2,28 @@ import {Body, Controller, Get, Param, Post, Query} from '@nestjs/common';
 import { AppService } from './app.service';
 import { Neo4jService } from 'nest-neo4j'
 import { DateTime } from 'neo4j-driver';
+import * as leti_json from '../default projects/Leti.json'
 
 @Controller()
 export class AppController {
   constructor(private readonly appService: AppService,
               private readonly neo4jService: Neo4jService
   ) {
+
+    (async () => {
+      const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
+      const projectList = response.records.map(x => x.get(0).properties)
+
+      if (projectList.length == 0)
+      {
+        let projects = leti_json.projects
+        
+        projects.map(async x => {
+            const res = await this.neo4jService.write(`CREATE (p:Project {id: ${x.id},address: "${x.address}",name: "${x.name}",DateOfChange: datetime("${x.date}")})`)
+        })
+      }
+    })()
+
   }
 
   @Get("/projects")
@@ -144,5 +160,23 @@ export class AppController {
     return {
       comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
     }
+  }
+
+  @Post("/projects/export")
+  async exportProjects(@Body() projects): Promise<any>
+  {
+    return {}
+  }
+
+  @Post("/projects/import")
+  async importProjects(@Body() projects): Promise<any>
+  {
+    return {}
+  }
+
+  @Post("/projects/delete")
+  async deleteProjects(@Body() projects): Promise<any>
+  {
+    return {}
   }
 }
