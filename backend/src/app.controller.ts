@@ -1,8 +1,9 @@
-import {Body, Controller, Get, Param, Post, Query} from '@nestjs/common';
+import {Body, Controller, Get, Param, Post, Query, Req, Res, UploadedFile, UseInterceptors} from '@nestjs/common';
 import { AppService } from './app.service';
 import { Neo4jService } from 'nest-neo4j'
 import { DateTime } from 'neo4j-driver';
 import * as leti_json from '../default projects/Leti.json'
+import {FileInterceptor} from "@nestjs/platform-express";
 
 @Controller()
 export class AppController {
@@ -165,13 +166,22 @@ export class AppController {
   @Post("/projects/export")
   async exportProjects(@Body() projects): Promise<any>
   {
-    return {}
+    return {projects:projects}
   }
 
   @Post("/projects/import")
-  async importProjects(@Body() projects): Promise<any>
+  @UseInterceptors(FileInterceptor('file'))
+  async importProjects(@Res() response, @UploadedFile() file): Promise<any>
   {
-    return {}
+    try {
+      let data = JSON.parse(file.buffer.toString())
+      console.log(data)
+      return response.status(201).json({})
+    }
+    catch(e){
+      console.log(e)
+      return response.status(500).json({})
+    }
   }
 
   @Post("/projects/delete")

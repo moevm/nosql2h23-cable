@@ -26,6 +26,11 @@ export default function (){
     const navigate = useNavigate()
     let comments = useLoaderData().data
     let [text,setText] = useState("")
+
+    useEffect(()=>{
+
+    },[])
+
     const handleSendButton = (event)=>{
         axios.post(`${apiHost}/project/${pid}/comment`,{text:text}).then(x=>{
             if(x.status === 201){

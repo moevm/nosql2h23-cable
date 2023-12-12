@@ -71,7 +71,17 @@ function Projects() {
             setExportMode(true)
         }
         else {
-            console.log("export",{projects: selected})
+            axios.post(`${apiHost}/projects/export`,{projects: selected}).then(x=>{
+                const json = JSON.stringify(x.data, null, 2);
+                const blob = new Blob([json], { type: "application/json" });
+                const href = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = href;
+                link.download = "export.json";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
         }
     }
     let deleteHandler = ()=>{
@@ -79,7 +89,10 @@ function Projects() {
             setDeleteMode(true)
         }
         else {
-            console.log("delete",{projects: selected})
+            axios.post(`${apiHost}/projects/delete`,{projects: selected}).then(
+                x =>
+                    axios.get(`${apiHost}/projects`).then(y=> setData(y.data))
+            )
         }
     }
     let cancelHandler = ()=>{
