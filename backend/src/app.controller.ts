@@ -172,7 +172,48 @@ export class AppController {
   @Post("/projects/export")
   async exportProjects(@Body() projects): Promise<any>
   {
-    return {projects:projects}
+    let exportList = projects.projects
+    let exportsJson = []
+    exportsJson = await Promise.all(
+      exportList.map(async id => {
+        const res = await this.neo4jService.read(`
+          match (p:Project {id: ${id}})
+          optional match (p)-[r]-(t)
+          return p, t
+        `)
+        let properties = res.records[0].get('p').properties
+        let commentList = []
+        let floorList = []
+        res.records.map(x => {
+          let elem = x.get('t')
+
+          if (elem.labels[0] == 'Floor')
+          {
+            floorList.push({
+              number: elem.properties.number.toNumber(),
+              plan: elem.properties.plan
+            })
+          }
+          else if (elem.labels[0] == 'Comment')
+          {
+            commentList.push({
+              comment_id: elem.properties.comment_id.toNumber(),
+              comment_text: elem.properties.comment_text,
+              comment_date: elem.properties.comment_date.toStandardDate()
+            })
+          }
+        })
+        return {
+          id: properties.id.toNumber(),
+          name: properties.name,
+          address: properties.address,
+          date: properties.DateOfChange.toStandardDate(),
+          comments: commentList,
+          floors: floorList
+        }
+      })
+      )
+    return {projects:exportsJson}
   }
 
   @Post("/projects/import")
