@@ -194,6 +194,13 @@ export class AppController {
   @Post("/projects/delete")
   async deleteProjects(@Body() projects): Promise<any>
   {
+    let deleteList = projects.projects
+    deleteList.map(async id => {
+      const res = await this.neo4jService.write(
+        `match (p:Project {id: ${id}})
+      optional match (p)-[r]-(t)
+      delete r,p,t`)
+    })
     return {}
   }
 }
