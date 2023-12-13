@@ -222,6 +222,18 @@ export class AppController {
   {
     try {
       let data = JSON.parse(file.buffer.toString())
+      await Promise.all(
+        data.projects.map(p => {
+            this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
+            const floors = p.floors
+
+            floors.map(f => {
+              this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
+            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${f.number}, plan: "${f.plan}"})
+            RETURN f`)
+            })
+        })
+      )
       return response.status(201).json({})
     }
     catch(e){
