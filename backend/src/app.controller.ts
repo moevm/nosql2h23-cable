@@ -14,13 +14,20 @@ export class AppController {
     (async () => {
       const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
       const projectList = response.records.map(x => x.get(0).properties)
-
+      
       if (projectList.length == 0)
       {
         let projects = leti_json.projects
         
-        projects.map(async x => {
-            const res = await this.neo4jService.write(`CREATE (p:Project {id: ${x.id},address: "${x.address}",name: "${x.name}",DateOfChange: datetime("${x.date}")})`)
+        projects.map(async p => {
+            await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
+            const floors = p.floors
+
+            floors.map(async f => {
+              await this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
+            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${f.number}, plan: "${f.plan}"})
+            RETURN f`)
+            })
         })
       }
     })()
