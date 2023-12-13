@@ -5,7 +5,7 @@ import './index.css'
 import {createBrowserRouter,RouterProvider} from "react-router-dom";
 import Projects from "./routes/projects/Projects.jsx";
 import Project, {newProjectLoader, projectLoader} from "./routes/project/Project.jsx";
-import Comments, {commentsLoader} from "./routes/project/Comments.jsx";
+import Comments from "./routes/project/Comments.jsx";
 import {store} from "./store/store.js";
 import {Provider} from "react-redux";
 import Description from "./routes/description/Description.jsx";
@@ -37,7 +37,6 @@ const router = createBrowserRouter([
     {
         path: "/projects/:pid/comments",
         element: <Comments />,
-        loader: commentsLoader
     },
     {
         path: "/description",
