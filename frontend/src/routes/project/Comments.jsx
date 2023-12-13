@@ -58,7 +58,7 @@ export default function (){
                         <button onClick={handleSendButton}>Отправить</button>
                     </div>
 
-                    <textarea value={text} onChange={(e)=>setText(e.currentTarget.value)} className={"bg-gray-400 w-3/4 h-full "} rows={5}/>
+                    <textarea onKeyPress={(e)=>{if(e.key === 'Enter') handleSendButton(e)}} value={text} onChange={(e)=>setText(e.currentTarget.value)} className={"bg-gray-400 w-3/4 h-full "} rows={5}/>
                 </div>
             </div>
         </div>
