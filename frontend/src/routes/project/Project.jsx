@@ -13,6 +13,7 @@ import {store} from "../../store/store.js";
 import {useEffect, useState} from "react";
 import axios from "axios";
 import {apiHost} from "../../main.jsx";
+import NotFound from "../NotFound.jsx";
 
 function Components({components}){
     return (
@@ -76,6 +77,7 @@ function Project(){
     const [floor,setFloor] = useState(+fid)
     const dispatch = useDispatch()
     const navigate = useNavigate();
+    const [error,setError] = useState(false)
     let projectState = useSelector(state => state.projectEditorState)
     useEffect(()=>{
         if(projectLoaded){
@@ -96,14 +98,18 @@ function Project(){
                 if (pid !== "new") {
                     axios.get(`${apiHost}/project/${pid}`)
                         .then(x => {
+                            setError(false)
                             dispatch(loadProject(x.data))
                             setProjectLoaded(true)
 
-                        })
+                        }).catch(x=>setError(true))
                 }
         }
     },[projectLoaded,floor])
 
+    if(error){
+        return <NotFound/>
+    }
 
     let floors = [...projectState.floors]
 
