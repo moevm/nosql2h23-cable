@@ -36,7 +36,7 @@ export class AppController {
 
   @Get("/projects")
   async getProjects(@Query('mode') mode: Number, @Query('query') query: String): Promise<any> {
-    
+
     let response
     if (mode === undefined || query === "")
     {
@@ -164,7 +164,6 @@ export class AppController {
   {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) RETURN c`)
     const listOfComments = response.records.map(x => x.get(0).properties)
-    console.log(listOfComments)
     return {
       comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
     }
@@ -195,12 +194,13 @@ export class AppController {
     let deleteList = projects.projects
     try 
     {
-      deleteList.map(async id => {
-        const res = await this.neo4jService.write(
-          `match (p:Project {id: ${id}})
-        optional match (p)-[r]-(t)
-        delete r,p,t`)
-      })
+      await Promise.all(
+        deleteList.map(id => {
+          return this.neo4jService.write(
+            `match (p:Project {id: ${id}})
+          optional match (p)-[r]-(t)
+          delete r,p,t`)
+      }))
       return response.status(201).json({})
     }
     catch(e)
