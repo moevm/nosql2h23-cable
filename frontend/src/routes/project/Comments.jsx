@@ -2,7 +2,7 @@ import {useLoaderData, useNavigate, useParams} from "react-router-dom";
 import axios from "axios";
 import {apiHost} from "../../main.jsx";
 import {setSaved} from "../../store/projectEditorState.js";
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 
 function Comment(props){
     return (
@@ -17,18 +17,14 @@ function Comment(props){
     )
 }
 
-export async function commentsLoader({params}){
-    return axios.get(`${apiHost}/project/${params.pid}/comments`)
-}
-
 export default function (){
     const { pid } = useParams();
     const navigate = useNavigate()
-    let comments = useLoaderData().data
+    let [comments,setComments] = useState({comments:[]})
     let [text,setText] = useState("")
 
     useEffect(()=>{
-
+        axios.get(`${apiHost}/project/${pid}/comments`).then(x=>setComments(x.data))
     },[])
 
     const handleSendButton = (event)=>{
