@@ -2,7 +2,7 @@ import {Body, Controller, Get, Param, Post, Query, Req, Res, UploadedFile, UseIn
 import { AppService } from './app.service';
 import { Neo4jService } from 'nest-neo4j'
 import { DateTime } from 'neo4j-driver';
-import * as leti_json from '../default projects/Leti.json'
+import * as defaultData from '../default projects/default.json'
 import {FileInterceptor} from "@nestjs/platform-express";
 
 @Controller()
@@ -17,7 +17,7 @@ export class AppController {
 
       if (projectList.length == 0)
       {
-        let projects = leti_json.projects
+        let projects = defaultData.projects
         
         projects.map(async p => {
             await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)

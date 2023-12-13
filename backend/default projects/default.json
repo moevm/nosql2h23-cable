@@ -1,0 +1,89 @@
+{
+  "projects": [
+    {
+      "id": 1702494683515,
+      "name": "Музей 'Фаберже'",
+      "address": "Наб. реки Фонтанки, 21",
+      "date": "2023-12-13T19:11:23.515Z",
+      "comments": [
+        {
+          "comment_id": 1702494697625,
+          "comment_text": "Все прикольно",
+          "comment_date": "2023-12-13T19:11:37.625Z"
+        }
+      ],
+      "floors": [
+        {
+          "number": 1,
+          "plan": ""
+        },
+        {
+          "number": 2,
+          "plan": ""
+        }
+      ]
+    },
+    {
+      "id": 1702494457235,
+      "name": "Leti",
+      "address": "Ylica Popova 5",
+      "date": "2023-12-13T19:07:37.235Z",
+      "comments": [
+        {
+          "comment_id": 1702494482188,
+          "comment_text": "Сломался маршрутизатор на 3-м этаже",
+          "comment_date": "2023-12-13T19:08:02.188Z"
+        }
+      ],
+      "floors": [
+        {
+          "number": 4,
+          "plan": ""
+        },
+        {
+          "number": 1,
+          "plan": ""
+        },
+        {
+          "number": 2,
+          "plan": ""
+        },
+        {
+          "number": 5,
+          "plan": ""
+        },
+        {
+          "number": 3,
+          "plan": ""
+        }
+      ]
+    },
+    {
+      "id": 1702494551112,
+      "name": "Laxta",
+      "address": "Laxta Center",
+      "date": "2023-12-13T19:09:11.112Z",
+      "comments": [
+        {
+          "comment_id": 1702494574135,
+          "comment_text": "Не хватает модемов на 48-м этаже",
+          "comment_date": "2023-12-13T19:09:34.135Z"
+        }
+      ],
+      "floors": [
+        {
+          "number": 3,
+          "plan": ""
+        },
+        {
+          "number": 2,
+          "plan": ""
+        },
+        {
+          "number": 1,
+          "plan": ""
+        }
+      ]
+    }
+  ]
+}
