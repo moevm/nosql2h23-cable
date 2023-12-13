@@ -51,7 +51,7 @@ function Projects() {
     },[exportMode,deleteMode])
     useEffect(()=>{
         setSelectAll(selected.length === data.projects.length)
-    },[selected])
+    },[selected, data])
     useEffect(()=>{
         console.log("request",searchQuery)
         axios.get(`${apiHost}/projects?mode=${filterSelected}&query=${searchQuery}`)
