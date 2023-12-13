@@ -98,7 +98,6 @@ export class AppController {
   @Get("/project/:id")
   async getProject(@Param('id') id): Promise<any> {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor RETURN n, countFloor`)
-
     const project = response.records[0].get('n').properties
     const floors = response.records[0].get('countFloor').toNumber()
 
