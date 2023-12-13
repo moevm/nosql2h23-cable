@@ -182,25 +182,30 @@ export class AppController {
   {
     try {
       let data = JSON.parse(file.buffer.toString())
-      console.log(data)
       return response.status(201).json({})
     }
     catch(e){
-      console.log(e)
       return response.status(500).json({})
     }
   }
 
   @Post("/projects/delete")
-  async deleteProjects(@Body() projects): Promise<any>
+  async deleteProjects(@Res() response, @Body() projects): Promise<any>
   {
     let deleteList = projects.projects
-    deleteList.map(async id => {
-      const res = await this.neo4jService.write(
-        `match (p:Project {id: ${id}})
-      optional match (p)-[r]-(t)
-      delete r,p,t`)
-    })
-    return {}
+    try 
+    {
+      deleteList.map(async id => {
+        const res = await this.neo4jService.write(
+          `match (p:Project {id: ${id}})
+        optional match (p)-[r]-(t)
+        delete r,p,t`)
+      })
+      return response.status(201).json({})
+    }
+    catch(e)
+    {
+      return response.status(500).json({})
+    }
   }
 }
