@@ -14,7 +14,7 @@ export class AppController {
     (async () => {
       const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
       const projectList = response.records.map(x => x.get(0).properties)
-      
+
       if (projectList.length == 0)
       {
         let projects = leti_json.projects
