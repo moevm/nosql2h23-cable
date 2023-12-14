@@ -168,7 +168,7 @@ function Project(){
                 </div>
                 <div className={"flex justify-between p-5"}>
                     <button>Отмена</button>
-                    {projectState.saved && <button onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
+                    {pid!=="new" && <button onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
                     <button onClick={handleSaveButton}>Сохранить</button>
                 </div>
             </div>

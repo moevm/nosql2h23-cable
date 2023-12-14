@@ -3,9 +3,9 @@ services:
   db:
     image: neo4j:5.14
     restart: always
-    ports:
-      - "127.0.0.1:7474:7474"
-      - "127.0.0.1:7687:7687"
+    #ports:
+    #  - "127.0.0.1:7474:7474"
+    #  - "127.0.0.1:7687:7687"
     volumes:
       - data:/data
     environment:

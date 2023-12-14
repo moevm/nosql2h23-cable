@@ -2,7 +2,7 @@ import {Body, Controller, Get, Param, Post, Query, Req, Res, UploadedFile, UseIn
 import { AppService } from './app.service';
 import { Neo4jService } from 'nest-neo4j'
 import { DateTime } from 'neo4j-driver';
-import * as leti_json from '../default projects/Leti.json'
+import * as defaultData from '../default projects/default.json'
 import {FileInterceptor} from "@nestjs/platform-express";
 
 @Controller()
@@ -17,10 +17,17 @@ export class AppController {
 
       if (projectList.length == 0)
       {
-        let projects = leti_json.projects
+        let projects = defaultData.projects
         
-        projects.map(async x => {
-            const res = await this.neo4jService.write(`CREATE (p:Project {id: ${x.id},address: "${x.address}",name: "${x.name}",DateOfChange: datetime("${x.date}")})`)
+        projects.map(async p => {
+            await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
+            const floors = p.floors
+
+            floors.map(async f => {
+              await this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
+            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${f.number}, plan: "${f.plan}"})
+            RETURN f`)
+            })
         })
       }
     })()
@@ -29,7 +36,7 @@ export class AppController {
 
   @Get("/projects")
   async getProjects(@Query('mode') mode: Number, @Query('query') query: String): Promise<any> {
-    
+
     let response
     if (mode === undefined || query === "")
     {
@@ -91,7 +98,6 @@ export class AppController {
   @Get("/project/:id")
   async getProject(@Param('id') id): Promise<any> {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor RETURN n, countFloor`)
-
     const project = response.records[0].get('n').properties
     const floors = response.records[0].get('countFloor').toNumber()
 
@@ -157,7 +163,6 @@ export class AppController {
   {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) RETURN c`)
     const listOfComments = response.records.map(x => x.get(0).properties)
-    console.log(listOfComments)
     return {
       comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
     }
@@ -166,7 +171,48 @@ export class AppController {
   @Post("/projects/export")
   async exportProjects(@Body() projects): Promise<any>
   {
-    return {projects:projects}
+    let exportList = projects.projects
+    let exportsJson = []
+    exportsJson = await Promise.all(
+      exportList.map(async id => {
+        const res = await this.neo4jService.read(`
+          match (p:Project {id: ${id}})
+          optional match (p)-[r]-(t)
+          return p, t
+        `)
+        let properties = res.records[0].get('p').properties
+        let commentList = []
+        let floorList = []
+        res.records.map(x => {
+          let elem = x.get('t')
+
+          if (elem.labels[0] == 'Floor')
+          {
+            floorList.push({
+              number: elem.properties.number.toNumber(),
+              plan: elem.properties.plan
+            })
+          }
+          else if (elem.labels[0] == 'Comment')
+          {
+            commentList.push({
+              comment_id: elem.properties.comment_id.toNumber(),
+              comment_text: elem.properties.comment_text,
+              comment_date: elem.properties.comment_date.toStandardDate()
+            })
+          }
+        })
+        return {
+          id: properties.id.toNumber(),
+          name: properties.name,
+          address: properties.address,
+          date: properties.DateOfChange.toStandardDate(),
+          comments: commentList,
+          floors: floorList
+        }
+      })
+      )
+    return {projects:exportsJson}
   }
 
   @Post("/projects/import")
@@ -175,18 +221,43 @@ export class AppController {
   {
     try {
       let data = JSON.parse(file.buffer.toString())
-      console.log(data)
+      await Promise.all(
+        data.projects.map(async p => {
+              await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
+            const floors = p.floors
+
+            return Promise.all(floors.map(f => {
+              return this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
+            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${f.number}, plan: "${f.plan}"})
+            RETURN f`)
+            }))
+        })
+      )
       return response.status(201).json({})
     }
     catch(e){
-      console.log(e)
       return response.status(500).json({})
     }
   }
 
   @Post("/projects/delete")
-  async deleteProjects(@Body() projects): Promise<any>
+  async deleteProjects(@Res() response, @Body() projects): Promise<any>
   {
-    return {}
+    let deleteList = projects.projects
+    try 
+    {
+      await Promise.all(
+        deleteList.map(id => {
+          return this.neo4jService.write(
+            `match (p:Project {id: ${id}})
+          optional match (p)-[r]-(t)
+          delete r,p,t`)
+      }))
+      return response.status(201).json({})
+    }
+    catch(e)
+    {
+      return response.status(500).json({})
+    }
   }
 }
