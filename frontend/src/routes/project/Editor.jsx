@@ -1,8 +1,9 @@
-import {useEffect, useRef} from "react";
+import {useEffect, useRef, useState} from "react";
 import routerSvg from "../../assets/router.svg";
 import cableSvg from "../../assets/cable.svg";
 import deleteSvg from "../../assets/delete.svg";
 import planSvg from "../../assets/plan.svg";
+import cursorSvg from "../../assets/cursor.svg";
 let editor
 
 class Editor{
@@ -11,7 +12,10 @@ class Editor{
         this.cableStarted = undefined
         this.grabOffset = {x:0,y:0}
         this.selectedComponent = undefined
+        this.areaSelectionCallback=undefined
         this.selectionCallback=undefined
+        this.selectionArea=undefined
+        this.selectionArray=[]
         this.components=[]
         this.cables=[]
     }
@@ -41,10 +45,21 @@ class Editor{
     }
 
     changeSelection(component){
+        if(component){
+            this.selectionArray=[component]
+        }
+        else
+        {
+            this.selectionArray=[]
+        }
         this.selectedComponent = component
         if(this.selectionCallback){
             this.selectionCallback(component)
         }
+        if(this.areaSelectionCallback){
+            this.areaSelectionCallback( this.selectionArray)
+        }
+
     }
 
     getCanvasCoordinates(pos) {
@@ -58,30 +73,16 @@ class Editor{
     mouseright(e){
         let pos = this.getCanvasCoordinates(e)
         e.preventDefault()
-        let c = this.getElementNearPos(pos, 15)
-        if(c && this.cableStarted !== undefined && c !== this.cableStarted)
-        {
-            if(!this.cables.find(x=>
-                (x.start === c.id && x.end === this.cableStarted.id)
-                ||
-                (x.start === this.cableStarted.id && x.end === c.id)
-            )) {
-                this.addCable(this.cableStarted, c)
-            }
-            this.cableStarted = undefined
-        }
-        else {
-            this.cableStarted = c
-        }
+
+
     }
 
     mousedown(e){
         let pos = this.getCanvasCoordinates(e)
-
-        if((e.which === 3 || e.button === 2)) {}
-        else {
+        if(this.mousePressed ) return
+        this.mousePressed = true
+        if(this.tool===0){
             this.cableStarted=undefined
-            this.mousePressed = true
             let c = this.getElementNearPos(pos, 10)
             let cable = this.getCableNearPos(pos, 4)
             if (c) {
@@ -91,30 +92,61 @@ class Editor{
                     x: this.selectedComponent.pos.x - pos.x,
                     y: this.selectedComponent.pos.y - pos.y
                 }
-                this.draw()
             }
             else if(cable){
                 this.changeSelection(cable)
-                this.draw()
+            }
+            else{
+                this.cableStarted=undefined
+                this.changeSelection(undefined)
+                this.selectionArea = {start:pos,end:pos}
+            }
+
+            this.draw()
+        }
+        else if (this.tool===1)
+        {
+            let c = this.getElementNearPos(pos, 10)
+            this.cableStarted=undefined
+            this.changeSelection(undefined)
+            if (c) return
+            this.addComponent(pos)
+        }
+        else if (this.tool===2)
+        {
+            console.log('cable')
+            let c = this.getElementNearPos(pos, 15)
+            if(c && this.cableStarted !== undefined && c !== this.cableStarted)
+            {
+                if(!this.cables.find(x=>
+                    (x.start === c.id && x.end === this.cableStarted.id)
+                    ||
+                    (x.start === this.cableStarted.id && x.end === c.id)
+                )) {
+                    this.addCable(this.cableStarted, c)
+                }
+                this.cableStarted = undefined
             }
             else {
-                this.changeSelection(undefined)
-                this.addComponent(pos)
+                this.cableStarted = c
             }
         }
-
     }
     mouseup(e)
     {
         this.mousePressed = false
+        this.selectionArea=undefined
+        this.draw()
     }
     mousemove(e)
     {
         let pos = this.getCanvasCoordinates(e)
+
         if(this.mousePressed){
            // this.ctx.fillStyle = 'red';
             //this.ctx.fillRect(pos.x, pos.y, 5, 5);
             //console.log("move")
+
             if(this.selectedComponent){
                 this.selectedComponent.pos = {
                     x:pos.x+this.grabOffset.x,
@@ -122,8 +154,50 @@ class Editor{
                 }
                 this.draw()
             }
+            if(this.selectionArea){
+                this.selectionArea.end=pos
+
+                this.selectionArray = [
+                    ...this.components.filter((x)=>this.isInSelection(x.pos)),
+                    ...this.cables.filter(c=> {
+                        let comp1 = this.components.find(x=>x.id === c.start)
+                        let comp2 = this.components.find(x=>x.id === c.end)
+                        return this.isInSelection({x: (comp1.pos.x+comp2.pos.x)/2,y: (comp1.pos.y+comp2.pos.y)/2})
+                    })]
+                if(this.areaSelectionCallback){
+                    this.areaSelectionCallback( this.selectionArray)
+                }
+                this.draw()
+            }
+
+        }
+        if(this.cableStarted){
+            this.draw()
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.moveTo(this.cableStarted.pos.x,this.cableStarted.pos.y)
+            this.ctx.lineTo(pos.x,pos.y)
+
+            this.ctx.strokeStyle='#D9D9D9'
+            this.ctx.stroke();
         }
 
+    }
+
+    isInSelection(pos){
+        return pos.x > Math.min(this.selectionArea.start.x,this.selectionArea.end.x)
+        &&
+        pos.x < Math.max(this.selectionArea.start.x,this.selectionArea.end.x)
+        &&
+        pos.y > Math.min(this.selectionArea.start.y,this.selectionArea.end.y)
+        &&
+        pos.y < Math.max(this.selectionArea.start.y,this.selectionArea.end.y)
+    }
+
+    newId(){
+        let id = 0
+        while (this.components.find(x=>x.id === id)) id++
+        return id
     }
 
     addComponent(pos){
@@ -131,7 +205,7 @@ class Editor{
             name:"123",
             type:"router",
             model:"cable",
-            id: this.components.length,
+            id: this.newId(),
             pos: pos
         })
         this.draw()
@@ -149,7 +223,7 @@ class Editor{
     }
 
     drawComponent(c){
-        if(this.selectedComponent === c)
+        if(this.selectionArray.find(x=>x === c))
         {
             this.ctx.fillStyle = 'green';
             this.ctx.beginPath();
@@ -166,7 +240,7 @@ class Editor{
 
         let comp1 = this.components.find(x=>x.id === c.start)
         let comp2 = this.components.find(x=>x.id === c.end)
-        if(this.selectedComponent === c) {
+        if(this.selectionArray.find(x=>x === c)) {
             this.ctx.lineWidth = 4;
             this.ctx.beginPath();
             this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
@@ -193,6 +267,13 @@ class Editor{
         for(let component of this.components){
             this.drawComponent(component)
         }
+        if(this.selectionArea){
+            this.ctx.fillStyle = 'rgba(147,147,255,0.49)';
+            this.ctx.fillRect(this.selectionArea.start.x,
+                this.selectionArea.start.y,
+                -this.selectionArea.start.x+this.selectionArea.end.x,
+                -this.selectionArea.start.y+this.selectionArea.end.y);
+        }
 
     }
 
@@ -208,6 +289,19 @@ class Editor{
             return this.getDistToPoint(comp1.pos,comp2.pos,pos) <= tolerance
         })
 
+    }
+    setTool(tool){
+        this.tool = tool
+    }
+
+    removeSelected(){
+        this.components=this.components.filter(x => !this.selectionArray.includes(x))
+        this.cables=this.cables.filter(x => !this.selectionArray.find(y=> y.id===x.start ||  y.id===x.end || x===y))
+        this.selectionArray=[]
+        if(this.areaSelectionCallback){
+            this.areaSelectionCallback(this.selectionArray)
+        }
+        this.draw()
     }
 
     getDistToPoint(start,end,point){
@@ -231,10 +325,22 @@ class Editor{
 
 }
 
+function Hint({text}){
+    return (
+            <div className={"panel-bg absolute px-2 py-1 hint"}>
+                {text}
+            </div>
+    )
+}
+
+
 
 
 export default function ({data,onSelection}){
     const canvasRef = useRef(null)
+    const [tool,setTool] = useState(0)
+    const [deleteVisible,SetDeleteVisible] = useState(false)
+    const [selected,setSelected] = useState()
     useEffect(() => {
         const canvas = canvasRef.current;
         if(!editor){
@@ -246,27 +352,54 @@ export default function ({data,onSelection}){
             console.log('exists')
             console.log(canvas)
         }
-        editor.selectionCallback = onSelection
+        editor.selectionCallback = (e)=>{
+            setSelected(e)
+            onSelection(e)
+        }
+        editor.areaSelectionCallback = (e)=>{
+            SetDeleteVisible(e.length > 0)
+        }
         editor.initCanvas(canvas)
+        editor.setTool(tool)
 
 
 
     }, []);
 
+    const toolChangeHandler = (e)=>{
+        setTool(e)
+        editor.setTool(e)
+    }
+
+
     return (
         <div className={"flex flex-col w-full h-full"}>
             <div className={"flex justify-start w-full light-panel-bg"}>
-                <button className={"editor-button flex justify-center items-center"}>
-                    <img className={"w-4/5"} src={routerSvg} alt={"Добавить маршрутизатор"}/>
+                <button onClick={()=>toolChangeHandler(0)}
+                    style={{backgroundColor:tool===0? "#9393ff":"#F8F8F8"}}
+                    className={"editor-button flex justify-center items-center hint-button"}>
+                    <img className={"w-4/5"} src={cursorSvg} alt={"Перемещение"}/>
+                    <Hint text={"Перемещение"}/>
                 </button>
-                <button className={"editor-button"}>
-                    <img src={cableSvg} alt={"Добавить кабель"}/>
+                <button onClick={()=>toolChangeHandler(1)} style={{backgroundColor:tool===1? "#9393ff":"#F8F8F8"}}
+                    className={"editor-button flex justify-center items-center hint-button"}>
+                    <img className={"w-4/5"} src={routerSvg} alt={"Маршрутизатор"}/>
+                    <Hint text={"Маршрутизатор"}/>
                 </button>
-                <button className={"editor-button"}>
+                <button onClick={()=>toolChangeHandler(2)} style={{backgroundColor:tool===2? "#9393ff":"#F8F8F8"}}
+                    className={"editor-button hint-button"}>
+                    <img src={cableSvg} alt={"Кабель"}/>
+                    <Hint text={"Кабель"}/>
+                </button>
+                {deleteVisible && <button onClick={()=>editor.removeSelected()}
+                    className={"editor-button hint-button"}>
                     <img src={deleteSvg} alt={"Удалить"}/>
-                </button>
-                <button className={"editor-button flex justify-center items-center"}>
-                    <img className={"w-3/4"} src={planSvg} alt={"Загрузить план"}/>
+                    <Hint text={"Удалить"}/>
+                </button>}
+                <button
+                    className={"editor-button flex justify-center items-center hint-button"}>
+                    <img className={"w-3/4"} src={planSvg} alt={"План"}/>
+                    <Hint text={"План"}/>
                 </button>
             </div>
 
