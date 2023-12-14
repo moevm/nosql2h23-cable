@@ -1,24 +1,29 @@
 import {useEffect, useRef} from "react";
-
+import routerSvg from "../../assets/router.svg";
+import cableSvg from "../../assets/cable.svg";
+import deleteSvg from "../../assets/delete.svg";
+import planSvg from "../../assets/plan.svg";
 let editor
 
 class Editor{
-    constructor(canvas) {
-        this.canvas = canvas
-        this.ctx = canvas.getContext('2d');
+    constructor() {
         this.mousePressed = false
         this.cableStarted = undefined
         this.grabOffset = {x:0,y:0}
         this.selectedComponent = undefined
+        this.selectionCallback=undefined
         this.components=[]
         this.cables=[]
-        this.initCanvas()
-
     }
 
-    initCanvas(){
-        this.canvas.style.width="50vw";
-        this.canvas.style.height="50vh";
+    initCanvas(canvas){
+        this.mousePressed = false
+        this.selectedComponent = undefined
+        this.cableStarted = undefined
+        this.canvas = canvas
+        this.ctx = canvas.getContext('2d');
+        this.canvas.style.width="100%";
+        this.canvas.style.height="100%";
         this.resize()
         this.canvas.style.imageRendering="crisp-edges"
         this.canvas.addEventListener('mousedown',(e)=>this.mousedown(e))
@@ -34,6 +39,14 @@ class Editor{
         this.canvas.height = this.canvas.clientHeight
         this.draw()
     }
+
+    changeSelection(component){
+        this.selectedComponent = component
+        if(this.selectionCallback){
+            this.selectionCallback(component)
+        }
+    }
+
     getCanvasCoordinates(pos) {
         let canvasBox = this.canvas.getBoundingClientRect()
         return {
@@ -44,7 +57,6 @@ class Editor{
 
     mouseright(e){
         let pos = this.getCanvasCoordinates(e)
-        console.log(this.cables)
         e.preventDefault()
         let c = this.getElementNearPos(pos, 15)
         if(c && this.cableStarted !== undefined && c !== this.cableStarted)
@@ -68,12 +80,13 @@ class Editor{
 
         if((e.which === 3 || e.button === 2)) {}
         else {
+            this.cableStarted=undefined
             this.mousePressed = true
-            console.log("down")
             let c = this.getElementNearPos(pos, 10)
             let cable = this.getCableNearPos(pos, 4)
             if (c) {
-                this.selectedComponent = c
+
+                this.changeSelection(c)
                 this.grabOffset = {
                     x: this.selectedComponent.pos.x - pos.x,
                     y: this.selectedComponent.pos.y - pos.y
@@ -81,11 +94,11 @@ class Editor{
                 this.draw()
             }
             else if(cable){
-                this.selectedComponent = cable
+                this.changeSelection(cable)
                 this.draw()
             }
             else {
-                this.selectedComponent = undefined
+                this.changeSelection(undefined)
                 this.addComponent(pos)
             }
         }
@@ -94,7 +107,6 @@ class Editor{
     mouseup(e)
     {
         this.mousePressed = false
-        console.log("up")
     }
     mousemove(e)
     {
@@ -117,7 +129,8 @@ class Editor{
     addComponent(pos){
         this.components.push({
             name:"123",
-            type:"321",
+            type:"router",
+            model:"cable",
             id: this.components.length,
             pos: pos
         })
@@ -127,8 +140,8 @@ class Editor{
     addCable(comp1,comp2){
 
         this.cables.push({
-            name:"132",
-            type:"321",
+            type:"cable",
+            model:"123",
             start:comp1.id,
             end:comp2.id
         })
@@ -143,7 +156,7 @@ class Editor{
             this.ctx.arc(c.pos.x, c.pos.y, 12, 0, 2 * Math.PI , true);
             this.ctx.fill();
         }
-        this.ctx.fillStyle = 'gray';
+        this.ctx.fillStyle = '#D9D9D9';
         this.ctx.beginPath();
         this.ctx.arc(c.pos.x, c.pos.y, 10, 0, 2 * Math.PI , true);
         this.ctx.fill();
@@ -167,12 +180,12 @@ class Editor{
         this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
         this.ctx.lineTo(comp2.pos.x,comp2.pos.y)
 
-        this.ctx.strokeStyle='#bdbdbd'
+        this.ctx.strokeStyle='#D9D9D9'
         this.ctx.stroke();
     }
 
     draw(){
-        this.ctx.fillStyle = 'black';
+        this.ctx.fillStyle = '#F8F8F8';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         for(let cable of this.cables){
             this.drawCable(cable)
@@ -220,18 +233,44 @@ class Editor{
 
 
 
-export default function (){
+export default function ({data,onSelection}){
     const canvasRef = useRef(null)
-
     useEffect(() => {
         const canvas = canvasRef.current;
         if(!editor){
             editor = new Editor(canvas)
+
             //editor.draw()
         }
+        else{
+            console.log('exists')
+            console.log(canvas)
+        }
+        editor.selectionCallback = onSelection
+        editor.initCanvas(canvas)
+
 
 
     }, []);
 
-    return <canvas ref={canvasRef} className={"w-full h-full"}> </canvas>
+    return (
+        <div className={"flex flex-col w-full h-full"}>
+            <div className={"flex justify-start w-full light-panel-bg"}>
+                <button className={"editor-button flex justify-center items-center"}>
+                    <img className={"w-4/5"} src={routerSvg} alt={"Добавить маршрутизатор"}/>
+                </button>
+                <button className={"editor-button"}>
+                    <img src={cableSvg} alt={"Добавить кабель"}/>
+                </button>
+                <button className={"editor-button"}>
+                    <img src={deleteSvg} alt={"Удалить"}/>
+                </button>
+                <button className={"editor-button flex justify-center items-center"}>
+                    <img className={"w-3/4"} src={planSvg} alt={"Загрузить план"}/>
+                </button>
+            </div>
+
+            <canvas ref={canvasRef} className={"w-full h-full"}> </canvas>
+        </div>
+)
 }

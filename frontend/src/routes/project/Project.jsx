@@ -15,11 +15,12 @@ import axios from "axios";
 import {apiHost} from "../../main.jsx";
 import NotFound from "../NotFound.jsx";
 import Editor from "./Editor.jsx";
+import routerSvg from "../../assets/router.svg"
 
 function Components({components}){
     return (
-        <div className={"bg-gray-400 p-5"}>
-           <input placeholder={"Поиск"}/>
+        <div className={"panel-bg p-5 w-full"}>
+           <input className={"w-full"} placeholder={"Поиск"}/>
             <div>
                 {components?components.map(x=>{
                     return <div>
@@ -52,9 +53,9 @@ export async function newProjectLoader({params}){
 
 }
 
-function CableProperties(){
+function CableProperties({data}){
     return (
-        <div className={"bg-gray-400 flex flex-col items-start p-8"}>
+        <div className={"panel-bg flex flex-col w-full items-start p-8"}>
             <div className={"flex justify-center w-full"}>
                 <span>Параметры кабеля</span>
             </div>
@@ -62,13 +63,28 @@ function CableProperties(){
                 <span>Длина (м)</span>
                 <input/>
                 <span>Тип</span>
-                <input/>
+                <input value={data.model}/>
             </div>
         </div>
 
     )
 }
+function RouterProperties({data}){
+    return (
+        <div className={"w-full panel-bg flex flex-col items-start p-8"}>
+            <div className={"flex justify-center w-full"}>
+                <span>Параметры маршрутизатора</span>
+            </div>
+            <div className={"flex flex-col w-full"}>
+                <span>Название</span>
+                <input value={data.name}/>
+                <span>Модель</span>
+                <input value={data.model}/>
+            </div>
+        </div>
 
+    )
+}
 
 function Project(){
 
@@ -78,6 +94,7 @@ function Project(){
     const [floor,setFloor] = useState(+fid)
     const dispatch = useDispatch()
     const navigate = useNavigate();
+    const [selected,setSelected] = useState()
     const [error,setError] = useState(false)
     let projectState = useSelector(state => state.projectEditorState)
     useEffect(()=>{
@@ -88,7 +105,6 @@ function Project(){
                 navigate(`/projects/${pid}/floor/1`)
             }
             else {
-                console.log("floor here")
                 if(projectLoaded && !floor.components) {
                     axios.get(`${apiHost}/project/${pid}/floor/${fid}`)
                         .then(x=> dispatch(loadFloor(x.data)))
@@ -114,7 +130,6 @@ function Project(){
 
     let floors = [...projectState.floors]
 
-    console.log(projectState)
     const handleFloorButton = (event)=>{
         setFloor(+event.currentTarget.id)
         navigate(`/projects/${pid}/floor/${event.currentTarget.id}`)
@@ -133,12 +148,12 @@ function Project(){
 
     return (
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between gap-2 h-full"}>
-            <div style={{flex:"25%"}} className={"flex flex-col justify-around h-full"}>
+            <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
                 <button onClick={()=>navigate("/")}>{"<- К проектам"}</button>
                 <Components components={projectLoaded?floors.find(x=>x.floor === floor).components:[]}/>
-                <CableProperties />
+                {selected && (selected.type === "router"?<RouterProperties data={selected}/>:<CableProperties data={selected}/>)}
             </div>
-            <div style={{flex:"70%"}} className={"h-full"} >
+            <div style={{flex:"70%"}} className={"flex flex-col justify-between h-full"} >
                 <div className={"flex justify-between p-5"}>
                     <div  className={"flex flex-col"}>
                         <input type={"text"}
@@ -153,18 +168,8 @@ function Project(){
                     <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
                     <button onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
-                <div className={"bg-gray-400  w-full p-5"}>
-                    <div className={"flex justify-end w-full"}>
-                        <button>Загрузить план этажа</button>
-                    </div>
-                    <div className={"flex justify-start w-full"}>
-                        <button>Добавить маршрутизатор</button>
-                        <button>Добавить кабель</button>
-                        <button>Удалить</button>
-                    </div>
-                    <div className={"flex justify-center w-full"}>
-                        <Editor clas ="width:1600px; height:900px;position: relative"/>
-                    </div>
+                <div className={"flex flex-col panel-bg  w-full p-5 h-full"}>
+                    {projectState && <Editor data={projectState} onSelection={setSelected}/>}
                 </div>
                 <div className={"flex justify-between p-5"}>
                     <button>Отмена</button>
@@ -172,26 +177,28 @@ function Project(){
                     <button onClick={handleSaveButton}>Сохранить</button>
                 </div>
             </div>
-            <div className={"w-20 flex flex-col justify-center items-center h-full gap-2"}>
+            <div className={"w-20 flex flex-col justify-center items-center h-full"}>
                 <div>
                     Этаж
                 </div>
 
                 <button className={"floor-button"}
                         onClick={(e)=>dispatch(addFloor(projectState.floors.length+1))}>+</button>
-                { floors.sort((a,b)=>-a.floor+b.floor).map(x=>{
-                        if (x.floor === Number(fid)) {
-                            return <button className={"floor-button"}
-                                           style={{backgroundColor:"blue"}}>{x.floor}</button>
+                <div className={"flex flex-col overflow-y-scroll max-h-full w-full items-center p-2 scroll-hidden gap-2"}>
+                    { floors.sort((a,b)=>-a.floor+b.floor).map(x=>{
+                            if (x.floor === Number(fid)) {
+                                return <button className={"floor-button"}
+                                               style={{backgroundColor:"blue"}}>{x.floor}</button>
+                            }
+                            else {
+                                return <button className={"floor-button"}
+                                               id={(x.floor).toString()}
+                                               onClick={handleFloorButton}>{x.floor}</button>
+                            }
                         }
-                        else {
-                            return <button className={"floor-button"}
-                                           id={(x.floor).toString()}
-                                           onClick={handleFloorButton}>{x.floor}</button>
-                        }
+                    )
                     }
-                )
-                }
+                </div>
             </div>
         </div>
     )

@@ -53,11 +53,10 @@ function Projects() {
         setSelectAll(selected.length === data.projects.length)
     },[selected, data])
     useEffect(()=>{
-        console.log("request",searchQuery)
         axios.get(`${apiHost}/projects?mode=${filterSelected}&query=${searchQuery}`)
             .then(x=>setData(x.data))
 
-    },[searchQuery])
+    },[searchQuery,selected])
     let checkboxHandler = (id,value)=>{
         if(value){
             setSelected([...selected,id])
