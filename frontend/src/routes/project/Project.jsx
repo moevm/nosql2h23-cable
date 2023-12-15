@@ -169,7 +169,7 @@ function Project(){
                     <button onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
                 <div className={"flex flex-col panel-bg  w-full p-5 h-full"}>
-                    {projectState && <Editor data={projectState} onSelection={setSelected}/>}
+                    {projectState && <Editor data={projectState.floors[+fid]} onSelection={setSelected}/>}
                 </div>
                 <div className={"flex justify-between p-5"}>
                     <button>Отмена</button>

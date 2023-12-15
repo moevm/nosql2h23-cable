@@ -15,7 +15,9 @@ class Editor{
         this.areaSelectionCallback=undefined
         this.selectionCallback=undefined
         this.selectionArea=undefined
+        this.componentsCallback=undefined
         this.selectionArray=[]
+        this.plan = undefined
         this.components=[]
         this.cables=[]
     }
@@ -173,12 +175,12 @@ class Editor{
         }
         if(this.cableStarted){
             this.draw()
-            this.ctx.lineWidth = 2;
+            this.ctx.lineWidth = 4;
             this.ctx.beginPath();
             this.ctx.moveTo(this.cableStarted.pos.x,this.cableStarted.pos.y)
             this.ctx.lineTo(pos.x,pos.y)
 
-            this.ctx.strokeStyle='#D9D9D9'
+            this.ctx.strokeStyle='#ff2e2e'
             this.ctx.stroke();
         }
 
@@ -202,12 +204,14 @@ class Editor{
 
     addComponent(pos){
         this.components.push({
-            name:"123",
             type:"router",
-            model:"cable",
             id: this.newId(),
             pos: pos
         })
+        if(this.componentsCallback){
+            this.componentsCallback({components:this.components,cables:this.cables})
+        }
+
         this.draw()
     }
 
@@ -215,22 +219,24 @@ class Editor{
 
         this.cables.push({
             type:"cable",
-            model:"123",
             start:comp1.id,
             end:comp2.id
         })
+        if(this.componentsCallback){
+            this.componentsCallback({components:this.components,cables:this.cables})
+        }
         this.draw()
     }
 
     drawComponent(c){
         if(this.selectionArray.find(x=>x === c))
         {
-            this.ctx.fillStyle = 'green';
+            this.ctx.fillStyle = 'black';
             this.ctx.beginPath();
             this.ctx.arc(c.pos.x, c.pos.y, 12, 0, 2 * Math.PI , true);
             this.ctx.fill();
         }
-        this.ctx.fillStyle = '#D9D9D9';
+        this.ctx.fillStyle = '#39c013';
         this.ctx.beginPath();
         this.ctx.arc(c.pos.x, c.pos.y, 10, 0, 2 * Math.PI , true);
         this.ctx.fill();
@@ -241,26 +247,46 @@ class Editor{
         let comp1 = this.components.find(x=>x.id === c.start)
         let comp2 = this.components.find(x=>x.id === c.end)
         if(this.selectionArray.find(x=>x === c)) {
-            this.ctx.lineWidth = 4;
+            this.ctx.lineWidth = 8;
             this.ctx.beginPath();
             this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
             this.ctx.lineTo(comp2.pos.x,comp2.pos.y)
 
-            this.ctx.strokeStyle='green'
+            this.ctx.strokeStyle='black'
             this.ctx.stroke();
         }
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 4;
         this.ctx.beginPath();
         this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
         this.ctx.lineTo(comp2.pos.x,comp2.pos.y)
 
-        this.ctx.strokeStyle='#D9D9D9'
+        this.ctx.strokeStyle='#ff2e2e'
         this.ctx.stroke();
     }
 
     draw(){
-        this.ctx.fillStyle = '#F8F8F8';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        if(!this.plan){
+            this.ctx.fillStyle = '#F8F8F8';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+        else
+        {
+            this.ctx.fillStyle = '#F8F8F8';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            let imgaspect = this.plan.width/this.plan.height
+            let canvasaspect = this.canvas.width/this.canvas.height
+
+            if(imgaspect<canvasaspect){
+                let x = this.canvas.width/2-this.canvas.height*imgaspect/2
+                this.ctx.drawImage(this.plan,x, 0, this.canvas.height*imgaspect, this.canvas.height)
+            }
+            else{
+                let y = this.canvas.height/2-this.canvas.width/imgaspect/2
+                this.ctx.drawImage(this.plan,0, y, this.canvas.width, this.canvas.width/imgaspect)
+            }
+
+        }
         for(let cable of this.cables){
             this.drawCable(cable)
         }
@@ -291,6 +317,7 @@ class Editor{
 
     }
     setTool(tool){
+        this.changeSelection(undefined)
         this.tool = tool
     }
 
@@ -300,6 +327,9 @@ class Editor{
         this.selectionArray=[]
         if(this.areaSelectionCallback){
             this.areaSelectionCallback(this.selectionArray)
+        }
+        if(this.componentsCallback){
+            this.componentsCallback({components:this.components,cables:this.cables})
         }
         this.draw()
     }
@@ -321,7 +351,18 @@ class Editor{
            return a / (2 * Math.sqrt((ex-sx)*(ex-sx)+(ey-sy)*(ey-sy)))
         }
     }
+    setPlan(data){
+        if(!this.plan)
+            this.plan = new Image()
+        this.plan.src = data
+        setTimeout(()=> this.draw(),10)
 
+    }
+
+    loadFloor({components,cables}){
+        this.cables=cables
+        this.components=components
+    }
 
 }
 
@@ -336,8 +377,9 @@ function Hint({text}){
 
 
 
-export default function ({data,onSelection}){
+export default function ({data,onSelection,onChange}){
     const canvasRef = useRef(null)
+    const planInputRef = useRef(null)
     const [tool,setTool] = useState(0)
     const [deleteVisible,SetDeleteVisible] = useState(false)
     const [selected,setSelected] = useState()
@@ -356,6 +398,7 @@ export default function ({data,onSelection}){
             setSelected(e)
             onSelection(e)
         }
+        editor.componentsCallback = onChange
         editor.areaSelectionCallback = (e)=>{
             SetDeleteVisible(e.length > 0)
         }
@@ -371,6 +414,15 @@ export default function ({data,onSelection}){
         editor.setTool(e)
     }
 
+    const fileChangeHandler = (e)=>{
+        if (FileReader && e.target.files && e.target.files.length) {
+            let fr = new FileReader();
+            fr.onload = ()=> {
+                editor.setPlan(fr.result);
+            }
+            fr.readAsDataURL(e.target.files[0]);
+        }
+    }
 
     return (
         <div className={"flex flex-col w-full h-full"}>
@@ -396,9 +448,10 @@ export default function ({data,onSelection}){
                     <img src={deleteSvg} alt={"Удалить"}/>
                     <Hint text={"Удалить"}/>
                 </button>}
-                <button
+                <button onClick={(e)=>planInputRef.current.click()}
                     className={"editor-button flex justify-center items-center hint-button"}>
                     <img className={"w-3/4"} src={planSvg} alt={"План"}/>
+                    <input ref={planInputRef} onChange={fileChangeHandler} className={"hidden"} type={"file"}/>
                     <Hint text={"План"}/>
                 </button>
             </div>
