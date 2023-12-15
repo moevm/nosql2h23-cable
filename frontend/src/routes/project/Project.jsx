@@ -18,19 +18,22 @@ import NotFound from "../NotFound.jsx";
 function Components({components}){
     return (
         <div className={"bg-gray-400 p-5"}>
-           <input placeholder={"Поиск"}/>
+            <span>Список компонентов</span>
+            <input placeholder={"Поиск"}/>
             <div>
-                {components?components.map(x=>{
+                {components ? components.map(x => {
                     return <div>
                         <span>{x.name}</span>
                     </div>
-                }):""}
+                }) : ""}
             </div>
+            <button onClick={() => navigate(`/projects/:pid/statistics`)}>Статистика</button>
+
         </div>
     )
 }
 
-function Properties(){
+function Properties() {
     return (
         <div className={"bg-gray-400"}>
             Параметры
@@ -132,7 +135,7 @@ function Project(){
 
     return (
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between gap-2 h-full"}>
-            <div style={{flex:"25%"}} className={"flex flex-col justify-around h-full"}>
+            <div style={{flex:"25%"}} className={"flex flex-col justify-between h-full"}>
                 <button onClick={()=>navigate("/")}>{"<- К проектам"}</button>
                 <Components components={projectLoaded?floors.find(x=>x.floor === floor).components:[]}/>
                 <CableProperties />
