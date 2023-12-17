@@ -27,10 +27,19 @@ export default function ({open,leaveHandler,selected,setSelected}){
             style={{right:0}}
             onClick={e=>e.stopPropagation()}
             onMouseLeave={leaveHandler}
-            className={"flex flex-col absolute border-2 bg-red-600"}>
-            <Checkbox checked={selected === 5} handler={(e)=>handleCheck(e,5)} name={"По всем"}/>
-            <Checkbox checked={selected & 1} handler={(e)=>handleCheck(e,1)} name={"По содержимому"}/>
-            {/*<Checkbox checked={selected & 2} handler={(e)=>handleCheck(e,2)} name={"По адресу"}/>*/}
-            <Checkbox checked={selected & 4} handler={(e)=>handleCheck(e,4)} name={"По дате"}/>
+            className={"flex flex-col gap-2 absolute panel-bg p-10 shadow rounded"}>
+            <span>По дате:</span>
+            <div className={"flex justify-between gap-2"}>
+                <span>От</span>
+                <input type={"datetime-local"}/>
+            </div>
+            <div className={"flex justify-between gap-2"}>
+                <span>До</span>
+                <input type={"datetime-local"}/>
+            </div>
+            <div className={"flex justify-between gap-2"}>
+                <span>Содержимое</span>
+                <input type={"text"}/>
+            </div>
         </div>)
 }

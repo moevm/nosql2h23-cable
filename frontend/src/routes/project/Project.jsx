@@ -21,7 +21,7 @@ function Components({components}){
     const navigate = useNavigate()
     const {pid} = useParams()
     return (
-        <div className={"panel-bg p-5 w-full"}>
+        <div className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
             <div>
@@ -31,7 +31,7 @@ function Components({components}){
                     </div>
                 }) : ""}
             </div>
-            <button onClick={() => navigate(`/projects/${pid}/statistics`)}>Статистика</button>
+            <button className={"button light-button"} onClick={() => navigate(`/projects/${pid}/statistics`)}>Статистика</button>
 
         </div>
     )
@@ -152,34 +152,34 @@ function Project(){
     }
 
     return (
-        <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between gap-2 h-full"}>
+        <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between light-panel-bg gap-2 h-full"}>
             <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
-                <button onClick={()=>navigate("/")}>{"<- К проектам"}</button>
+                <button className={"button"} onClick={()=>navigate("/")}>{"<- К проектам"}</button>
                 <Components components={projectLoaded?floors.find(x=>x.floor === floor).components:[]}/>
                 {selected && (selected.type === "router"?<RouterProperties data={selected}/>:<CableProperties data={selected}/>)}
             </div>
             <div style={{flex:"70%"}} className={"flex flex-col justify-between h-full"} >
                 <div className={"flex justify-between p-5"}>
                     <div  className={"flex flex-col"}>
-                        <input type={"text"}
+                        <input type={"text"} className={"text-2xl light-panel-bg"}
                                value={projectState.name}
                                onChange={(e)=>{dispatch(setName(e.currentTarget.value))}}
                         />
-                        <input type={"text"}
+                        <input type={"text"} className={"light-panel-bg"}
                                value={projectState.address}
                                onChange={(e)=>{dispatch(setAddress(e.currentTarget.value))}}
                         />
                     </div>
                     <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
-                    <button onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
+                    <button className={"button"} onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
                 <div className={"flex flex-col panel-bg  w-full p-5 h-full"}>
                     {projectState && <Editor data={projectState.floors[+fid]} onSelection={setSelected}/>}
                 </div>
                 <div className={"flex justify-between p-5"}>
-                    <button>Отмена</button>
-                    {pid!=="new" && <button onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
-                    <button onClick={handleSaveButton}>Сохранить</button>
+                    <button className={"button"} >Отмена</button>
+                    {pid!=="new" && <button className={"button"}  onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
+                    <button className={"button"}  onClick={handleSaveButton}>Сохранить</button>
                 </div>
             </div>
             <div className={"w-20 flex flex-col justify-center items-center h-full"}>

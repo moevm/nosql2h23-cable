@@ -84,18 +84,17 @@ export default function (){
 
 
     return (
-        <div onClick={()=>setFilterOpened(false)} className={"flex justify-center h-full"}>
+        <div onClick={()=>setFilterOpened(false)} className={"flex justify-center light-panel-bg h-full"}>
 
                 <div style={{width:"max(50%,320px"}} className={"flex flex-col justify-between  gap-3"}>
                     <div className={"flex justify-around"}>
-                        <button onClick={() => navigate(`/projects/${pid}`)}>Назад</button>
+                        <button className={"button"} onClick={() => navigate(`/projects/${pid}`)}>Назад</button>
                         <div className={"flex justify-normal"}>
-                            <input placeholder={"Поиск"} value={searchText} onInput={searchHandler}/>
                             <button
                                 onClick={(e) => {
                                     setFilterOpened(true);
                                     e.stopPropagation()
-                                }}>{">-"}</button>
+                                }}>{"Поиск"}</button>
                             <FilterPopup
                                 setSelected={setFilterSelected}
                                 selected={filterSelected}
@@ -113,7 +112,7 @@ export default function (){
                     </div>
                     <div className={"flex justify-between h-1/3"}>
                         <div>
-                            <button onClick={handleSendButton}>Отправить</button>
+                            <button className={"button"} onClick={handleSendButton}>Отправить</button>
                         </div>
 
                         <textarea onKeyPress={(e)=>{if(e.key === 'Enter') handleSendButton(e)}} value={text} onChange={(e)=>setText(e.currentTarget.value)} className={"bg-gray-400 w-3/4 h-full "} rows={5}/>

@@ -8,7 +8,7 @@ export default function (){
         id: 123
     }]
     return (
-        <div className={"flex justify-center h-full"}>
+        <div className={"flex justify-center light-panel-bg h-full"}>
             <div style={{width:"max(50%,320px"}} className={"flex flex-col justify-start  gap-3"}>
                 <div className={"flex"}>
                     <button onClick={()=>navigate(`/projects/${pid}`)}>Назад</button>
