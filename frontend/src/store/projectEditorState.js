@@ -23,13 +23,11 @@ export const projectEditorSlice = createSlice({
         loadProject: (state, action) => {
             state = {...action.payload}
             state.changed={}
-            console.log("load")
             return state
         },
         loadFloor: (state, action) => {
             let floor = action.payload
             state.floors.find(x=>x.floor === floor.floor).components = floor.components
-            console.log("load floor")
             return state
         },
         initProject: (state, action) => {
@@ -38,7 +36,6 @@ export const projectEditorSlice = createSlice({
             state.changed.name = state.name
             state.changed.address = state.address
             state.changed.floors=[{floor: 1, components: []}]
-            console.log("init")
             return state
         },
         setName: (state, action) => {
