@@ -18,21 +18,26 @@ import Editor from "./Editor.jsx";
 import routerSvg from "../../assets/router.svg"
 
 function Components({components}){
+    const navigate = useNavigate()
+    const {pid} = useParams()
     return (
         <div className={"panel-bg p-5 w-full"}>
+            <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
             <div>
-                {components?components.map(x=>{
+                {components ? components.map(x => {
                     return <div>
                         <span>{x.name}</span>
                     </div>
-                }):""}
+                }) : ""}
             </div>
+            <button onClick={() => navigate(`/projects/${pid}/statistics`)}>Статистика</button>
+
         </div>
     )
 }
 
-function Properties(){
+function Properties() {
     return (
         <div className={"bg-gray-400"}>
             Параметры
