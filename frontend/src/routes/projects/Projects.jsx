@@ -14,8 +14,8 @@ function ProjectEntry({data,number,checkboxes,checked,checkboxHandler}){
             <span style={{flex: "30%"}}>{data.name}</span>
             <span style={{flex: "30%"}}>{data.address}</span>
             <span style={{flex: "30%"}}>{new Date(data.date).toLocaleString()}</span>
-            <span style={{flex: "30%"}}>{data.floors ? data.floors.length:0}</span>
-            <span style={{flex: "30%"}}>{data.comment_count ? data.comment_count : 0}</span>
+            <span style={{flex: "20%"}}>{data.floors ? data.floors.length:0}</span>
+            <span style={{flex: "20%"}}>{data.comment_count ? data.comment_count : 0}</span>
             <div style={{flex: "5%"}}>
                 {checkboxes && <div>
                     <input checked={checked} onClick={(e) => {
@@ -141,13 +141,14 @@ function Projects() {
                             <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
                             <span>Выбрать все</span>
                         </div>}
-                        <div className={"flex flex-row justify-around"}>
-                            <span>Номер</span>
-                            <span>Название</span>
-                            <span>Адрес</span>
-                            <span>Дата</span>
-                            <span>Кол-во этажей</span>
-                            <span>Кол-во комментариев</span>
+                        <div className={"px-10 flex justify-between w-full"}>
+                            <span style={{flex: "10%"}}>Номер</span>
+                            <span style={{flex: "30%"}}>Название</span>
+                            <span style={{flex: "30%"}}>Адрес</span>
+                            <span style={{flex: "30%"}}>Дата</span>
+                            <span style={{flex: "20%"}}>Кол-во этажей</span>
+                            <span style={{flex: "20%"}}>Кол-во комментариев</span>
+                            <div style={{flex: "5%"}}/>
                         </div>
                         {data && data.projects.map((x,i)=>
                             <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
