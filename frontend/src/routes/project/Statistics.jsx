@@ -1,4 +1,8 @@
+import {useNavigate, useParams} from "react-router-dom";
+
 export default function (){
+    const navigate = useNavigate()
+    const {pid} = useParams()
     return (
         <div className={"flex justify-around h-full"}>
             <div style={{width: "max(50%,320px"}} className={"flex flex-col justify-stretch gap-10"}>
