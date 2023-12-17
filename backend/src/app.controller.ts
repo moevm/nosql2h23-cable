@@ -159,7 +159,7 @@ export class AppController {
   }
 
   @Get("/project/:id/comments")
-  async getComments(@Param('id') id): Promise<any>
+  async getComments(@Param('id') id, @Query('mode') mode: Number, @Query('query') query: String): Promise<any>
   {
     const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) RETURN c`)
     const listOfComments = response.records.map(x => x.get(0).properties)
@@ -167,6 +167,7 @@ export class AppController {
       comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
     }
   }
+
 
   @Post("/projects/export")
   async exportProjects(@Body() projects): Promise<any>
