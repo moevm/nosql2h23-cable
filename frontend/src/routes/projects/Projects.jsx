@@ -37,10 +37,24 @@ function Projects() {
     const [checkboxesVisible,setCheckboxesVisible] = useState(false);
     const [selected,setSelected] = useState([]);
     const [filterOpened,setFilterOpened] = useState(false);
-    const [filterSelected,setFilterSelected] = useState(7);
+    //const [filterSelected,setFilterSelected] = useState(7);
+
     const navigate = useNavigate();
-    const [searchText,setSearchText] = useState("")
-    const searchQuery = useDebounce(searchText,300)
+    //const [searchText,setSearchText] = useState("")
+
+
+    const [query,setQuery] = useState({
+        name: undefined,
+        address: undefined,
+        fromDate: undefined,
+        toDate: undefined,
+        fromFloor: undefined,
+        toFloor: undefined,
+        fromComment: undefined,
+        toComment: undefined
+    })
+    const searchQuery = useDebounce(query,300)
+
 
     useEffect(()=>{
         if(!data){
@@ -55,10 +69,10 @@ function Projects() {
         setSelectAll(selected.length === data.projects.length)
     },[selected, data])
     useEffect(()=>{
-        axios.get(`${apiHost}/projects?mode=${filterSelected}&query=${searchQuery}`)
+        axios.get(`${apiHost}/projects`,{params:searchQuery})
             .then(x=>setData(x.data))
 
-    },[searchQuery,selected])
+    },[searchQuery])
     let checkboxHandler = (id,value)=>{
         if(value){
             setSelected([...selected,id])
@@ -99,7 +113,7 @@ function Projects() {
     let cancelHandler = ()=>{
         setExportMode(false);
         setDeleteMode(false);
-        setSelected([]);
+       // setSelected([]);
     }
     let selectAllHandler = (value)=>{
         setSelectAll(value)
@@ -110,9 +124,6 @@ function Projects() {
             setSelected([])
         }
         console.log(value)
-    }
-    let searchHandler = (e)=>{
-        setSearchText(e.currentTarget.value)
     }
 
     return (
@@ -127,8 +138,8 @@ function Projects() {
                             className={"button"}
                             onClick={(e)=>{setFilterOpened(true);e.stopPropagation()}}>{"Поиск"}</button>
                         <FilterPopup
-                            setSelected={setFilterSelected}
-                            selected={filterSelected}
+                            setQuery={setQuery}
+                            query={query}
                             open={filterOpened}
                             leaveHandler={()=>setFilterOpened(false)}></FilterPopup>
                     </div>

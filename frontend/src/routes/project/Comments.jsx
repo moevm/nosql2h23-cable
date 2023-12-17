@@ -28,11 +28,13 @@ export default function (){
     let [text,setText] = useState("")
     const [searchText,setSearchText] = useState("")
     const [filterOpened,setFilterOpened] = useState(false);
-    const [filterSelected,setFilterSelected] = useState(5);
-    // const [checkboxesVisible,setCheckboxesVisible] = useState(false);
-    // const [selectAll,setSelectAll] = useState(false);
-    // const [selected,setSelected] = useState([]);
-    const searchQuery = useDebounce(searchText,300)
+    //const [filterSelected,setFilterSelected] = useState(5);
+    const [query,setQuery] = useState({
+        fromDate: undefined,
+        toDate: undefined,
+        content: undefined
+    })
+    const searchQuery = useDebounce(query,300)
 
     useEffect(()=>{
         axios.get(`${apiHost}/project/${pid}/comments`).then(x=>setComments(x.data))
@@ -40,7 +42,7 @@ export default function (){
 
     useEffect(()=>{
         console.log("request",searchQuery)
-        axios.get(`${apiHost}/project/${pid}/comments?mode=${filterSelected}&query=${searchQuery}`)
+        axios.get(`${apiHost}/project/${pid}/comments`,{params:searchQuery})
             .then(x=>setComments(x.data))
 
     },[searchQuery])
@@ -58,30 +60,6 @@ export default function (){
         })
     }
 
-    let searchHandler = (e)=>{
-        setSearchText(e.currentTarget.value)
-    }
-
-    // let selectAllHandler = (value)=>{
-    //     setSelectAll(value)
-    //     if(value){
-    //         setSelected(data.projects.map(x=>x.id))
-    //     }
-    //     else {
-    //         setSelected([])
-    //     }
-    //     console.log(value)
-    // }
-    //
-    // let checkboxHandler = (id,value)=>{
-    //     if(value){
-    //         setSelected([...selected,id])
-    //     }
-    //     else {
-    //         setSelected(selected.filter(x=>x!==id))
-    //     }
-    // }
-
 
     return (
         <div onClick={()=>setFilterOpened(false)} className={"flex justify-center light-panel-bg h-full"}>
@@ -96,8 +74,8 @@ export default function (){
                                     e.stopPropagation()
                                 }}>{"Поиск"}</button>
                             <FilterPopup
-                                setSelected={setFilterSelected}
-                                selected={filterSelected}
+                                setQuery={setQuery}
+                                query={query}
                                 open={filterOpened}
                                 leaveHandler={()=>setFilterOpened(false)}></FilterPopup>
                         </div>

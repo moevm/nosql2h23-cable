@@ -8,18 +8,30 @@ function Checkbox({name,checked,handler}){
     </div>)
 }
 
-export default function ({open,leaveHandler,selected,setSelected}){
+export default function ({open,leaveHandler,query,setQuery}){
 
-    let handleCheck = (e,n)=>{
-        if( e.currentTarget.checked){
-            setSelected(selected |= n)
+    let handleChange = (e,n)=>{
+        switch (n){
+            case "content":
+                setQuery({...query,content: e.currentTarget.value===""?undefined:e.currentTarget.value})
+                break
+            case "fromDate":
+                setQuery({...query,fromDate: Number.isNaN(Date.parse(e.currentTarget.value))?undefined:new Date(e.currentTarget.value).toISOString()})
+                break
+            case "toDate":
+                setQuery({...query,toDate: Number.isNaN(Date.parse(e.currentTarget.value))?undefined:new Date(e.currentTarget.value).toISOString()})
+                break
         }
-        else
-        {
-            setSelected(selected &= ~n)
-        }
+    }
 
+    const convertDate = (date)=>{
+        let d = new Date(date)
 
+        return `${d.getFullYear()}-${
+            d.getMonth().toLocaleString('en-US',{minimumIntegerDigits:2})}-${
+            d.getDate().toLocaleString('en-US',{minimumIntegerDigits:2})}T${
+            d.getHours().toLocaleString('en-US',{minimumIntegerDigits:2})}:${
+            d.getMinutes().toLocaleString('en-US',{minimumIntegerDigits:2})}`
     }
 
     return (open &&
@@ -31,15 +43,15 @@ export default function ({open,leaveHandler,selected,setSelected}){
             <span>По дате:</span>
             <div className={"flex justify-between gap-2"}>
                 <span>От</span>
-                <input type={"datetime-local"}/>
+                <input value={convertDate(new Date(query.fromDate))}  onChange={(e)=>handleChange(e,"fromDate")} type={"datetime-local"}/>
             </div>
             <div className={"flex justify-between gap-2"}>
                 <span>До</span>
-                <input type={"datetime-local"}/>
+                <input  value={convertDate(new Date(query.toDate))} onChange={(e)=>handleChange(e,"toDate")} type={"datetime-local"}/>
             </div>
             <div className={"flex justify-between gap-2"}>
                 <span>Содержимое</span>
-                <input type={"text"}/>
+                <input value={query.content} onChange={(e)=>handleChange(e,"content")}  type={"text"}/>
             </div>
         </div>)
 }
