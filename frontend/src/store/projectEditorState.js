@@ -6,6 +6,7 @@ const initialState = {
     address: "Адрес не указан",
     date: undefined,
     saved: false,
+    comment_count: 0,
     floors: [
         {
             floor: 1,
