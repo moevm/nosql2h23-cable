@@ -10,15 +10,17 @@ import useDebounce from "../../Debounce.jsx";
 function ProjectEntry({data,number,checkboxes,checked,checkboxHandler}){
     return (
         <Link to={`projects/${data.id}`} className={"border-2 p-10 flex justify-between w-full"}>
-            <span style={{flex:"10%"}}>{number}</span>
-            <span style={{flex:"30%"}}>{data.name}</span>
-            <span style={{flex:"30%"}}>{data.address}</span>
-            <span style={{flex:"30%"}}>{new Date(data.date).toLocaleString()}</span>
-            <div style={{flex:"5%"}}>
+            <span style={{flex: "10%"}}>{number}</span>
+            <span style={{flex: "30%"}}>{data.name}</span>
+            <span style={{flex: "30%"}}>{data.address}</span>
+            <span style={{flex: "30%"}}>{new Date(data.date).toLocaleString()}</span>
+            <span style={{flex: "30%"}}>{data.floors ? data.floors.length:0}</span>
+            <span style={{flex: "30%"}}>{data.comment_count ? data.comment_count : 0}</span>
+            <div style={{flex: "5%"}}>
                 {checkboxes && <div>
-                    <input checked={checked} onClick={(e)=>{
+                    <input checked={checked} onClick={(e) => {
                         e.stopPropagation();
-                        checkboxHandler(data.id,e.currentTarget.checked);
+                        checkboxHandler(data.id, e.currentTarget.checked);
                     }} type={"checkbox"}/>
                 </div>}
             </div>
@@ -27,7 +29,7 @@ function ProjectEntry({data,number,checkboxes,checked,checkboxHandler}){
 }
 
 function Projects() {
-    const [data,setData] = useState(
+    const [data, setData] = useState(
         { page: 1, total: 0, projects:[] })
     const [exportMode,setExportMode] = useState(false);
     const [selectAll,setSelectAll] = useState(false);
@@ -139,6 +141,14 @@ function Projects() {
                             <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
                             <span>Выбрать все</span>
                         </div>}
+                        <div className={"flex flex-row justify-around"}>
+                            <span>Номер</span>
+                            <span>Название</span>
+                            <span>Адрес</span>
+                            <span>Дата</span>
+                            <span>Кол-во этажей</span>
+                            <span>Кол-во комментариев</span>
+                        </div>
                         {data && data.projects.map((x,i)=>
                             <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
                         )}
