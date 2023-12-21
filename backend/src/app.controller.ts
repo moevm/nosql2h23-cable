@@ -54,8 +54,8 @@ export class AppController {
       let queryList = []
       if (query.name !== undefined) queryList.push(`n.name contains "${query.name}"`)
       if (query.address !== undefined) queryList.push(`n.address contains "${query.address}"`)
-      if (query.fromDate !== undefined) queryList.push(`n.DateOfChanges >= datetime("${query.fromDate}")`)
-      if (query.toDate !== undefined) queryList.push(`n.DateOfChanges <= datetime("${query.toDate}")`)
+      if (query.fromDate !== undefined) queryList.push(`n.DateOfChange >= datetime("${query.fromDate}")`)
+      if (query.toDate !== undefined) queryList.push(`n.DateOfChange <= datetime("${query.toDate}")`)
       if (query.fromFloor !== undefined) queryList.push(`countFloor >= ${query.fromFloor}`)
       if (query.toFloor !== undefined) queryList.push(`countFloor <= ${query.toFloor}`)
       if (query.fromComment !== undefined) queryList.push(`countComment >= ${query.fromComment}`)
