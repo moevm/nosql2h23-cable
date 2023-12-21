@@ -14,8 +14,8 @@ function ProjectEntry({data,number,checkboxes,checked,checkboxHandler}){
             <span style={{flex: "30%"}}>{data.name}</span>
             <span style={{flex: "30%"}}>{data.address}</span>
             <span style={{flex: "30%"}}>{new Date(data.date).toLocaleString()}</span>
-            <span style={{flex: "30%"}}>{data.floors ? data.floors.length:0}</span>
-            <span style={{flex: "30%"}}>{data.comment_count ? data.comment_count : 0}</span>
+            <span style={{flex: "20%"}}>{data.floors ? data.floors.length:0}</span>
+            <span style={{flex: "20%"}}>{data.comment_count ? data.comment_count : 0}</span>
             <div style={{flex: "5%"}}>
                 {checkboxes && <div>
                     <input checked={checked} onClick={(e) => {
@@ -37,10 +37,24 @@ function Projects() {
     const [checkboxesVisible,setCheckboxesVisible] = useState(false);
     const [selected,setSelected] = useState([]);
     const [filterOpened,setFilterOpened] = useState(false);
-    const [filterSelected,setFilterSelected] = useState(7);
+    //const [filterSelected,setFilterSelected] = useState(7);
+
     const navigate = useNavigate();
-    const [searchText,setSearchText] = useState("")
-    const searchQuery = useDebounce(searchText,300)
+    //const [searchText,setSearchText] = useState("")
+
+
+    const [query,setQuery] = useState({
+        name: undefined,
+        address: undefined,
+        fromDate: undefined,
+        toDate: undefined,
+        fromFloor: undefined,
+        toFloor: undefined,
+        fromComment: undefined,
+        toComment: undefined
+    })
+    const searchQuery = useDebounce(query,300)
+
 
     useEffect(()=>{
         if(!data){
@@ -55,10 +69,10 @@ function Projects() {
         setSelectAll(selected.length === data.projects.length)
     },[selected, data])
     useEffect(()=>{
-        axios.get(`${apiHost}/projects?mode=${filterSelected}&query=${searchQuery}`)
+        axios.get(`${apiHost}/projects`,{params:searchQuery})
             .then(x=>setData(x.data))
 
-    },[searchQuery,selected])
+    },[searchQuery])
     let checkboxHandler = (id,value)=>{
         if(value){
             setSelected([...selected,id])
@@ -99,7 +113,7 @@ function Projects() {
     let cancelHandler = ()=>{
         setExportMode(false);
         setDeleteMode(false);
-        setSelected([]);
+       // setSelected([]);
     }
     let selectAllHandler = (value)=>{
         setSelectAll(value)
@@ -111,62 +125,64 @@ function Projects() {
         }
         console.log(value)
     }
-    let searchHandler = (e)=>{
-        setSearchText(e.currentTarget.value)
-    }
 
     return (
-        <div onClick={()=>setFilterOpened(false)} className={"flex justify-between w-full"}>
-            <div  className={"flex flex-col justify-between w-full"}>
-                <div className={"flex justify-between w-full"}>
-                    <span>Список проектов</span>
-                    <div className={"flex justify-start"}>
-                        <div className={"relative"}>
-                            <input placeholder={"Поиск"} value={searchText} onInput={searchHandler}/>
+        <div onClick={()=>setFilterOpened(false)} className={"flex flex-col light-panel-bg  justify-start w-full h-full"}>
+            <div className={"flex justify-between items-center w-full light-panel-bg px-10 py-2"}>
+                <span className={"text-2xl"}>Список проектов</span>
+                <div className={"flex justify-start"}>
+                    <div className={"relative"}>
+                        {/*<input placeholder={"Поиск"} value={searchText} onInput={searchHandler}/>*/}
 
-                            <button
-                                onClick={(e)=>{setFilterOpened(true);e.stopPropagation()}}>{">-"}</button>
-                            <FilterPopup
-                                setSelected={setFilterSelected}
-                                selected={filterSelected}
-                                open={filterOpened}
-                                leaveHandler={()=>setFilterOpened(false)}></FilterPopup>
-                        </div>
+                        <button
+                            className={"button"}
+                            onClick={(e)=>{setFilterOpened(true);e.stopPropagation()}}>{"Поиск"}</button>
+                        <FilterPopup
+                            setQuery={setQuery}
+                            query={query}
+                            open={filterOpened}
+                            leaveHandler={()=>setFilterOpened(false)}></FilterPopup>
                     </div>
-
                 </div>
-                <div className={"flex justify-between w-full"}>
-                    <div className={"w-full"}>
-                        {checkboxesVisible && <div className={"flex w-full justify-end"}>
-                            <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
-                            <span>Выбрать все</span>
-                        </div>}
-                        <div className={"flex flex-row justify-around"}>
-                            <span>Номер</span>
-                            <span>Название</span>
-                            <span>Адрес</span>
-                            <span>Дата</span>
-                            <span>Кол-во этажей</span>
-                            <span>Кол-во комментариев</span>
-                        </div>
-                        {data && data.projects.map((x,i)=>
-                            <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
-                        )}
-                    </div>
 
-                </div>
             </div>
-            <div  className={"flex flex-col justify-start w-1/12"}>
-                {!exportMode && !deleteMode && <>
-                    <button onClick={(e)=>navigate("/projects/new")}>+</button>
-                    <button onClick={(e)=>navigate("/import")}>Импорт</button>
-                </>
-                }
-                {!deleteMode && <button onClick={exportHandler}>Экспорт</button>}
-                {!exportMode && <button onClick={deleteHandler}>Удалить</button>}
-                {(deleteMode || exportMode) &&
-                    <button onClick={cancelHandler}>Отмена</button>
-                }
+            <div className={"flex justify-between w-full"}>
+                <div  className={"flex flex-col justify-between w-full"}>
+
+                    <div className={"flex justify-between w-full"}>
+                        <div className={"w-full"}>
+                            {checkboxesVisible && <div className={"flex w-full justify-end"}>
+                                <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
+                                <span>Выбрать все</span>
+                            </div>}
+                            <div className={"px-10 flex justify-between w-full"}>
+                                <span style={{flex: "10%"}}>Номер</span>
+                                <span style={{flex: "30%"}}>Название</span>
+                                <span style={{flex: "30%"}}>Адрес</span>
+                                <span style={{flex: "30%"}}>Дата</span>
+                                <span style={{flex: "20%"}}>Кол-во этажей</span>
+                                <span style={{flex: "20%"}}>Кол-во комментариев</span>
+                                <div style={{flex: "5%"}}/>
+                            </div>
+                            {data && data.projects.map((x,i)=>
+                                <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
+                            )}
+                        </div>
+
+                    </div>
+                </div>
+                <div  className={"flex flex-col justify-start p-2 w-1/12"}>
+                    {!exportMode && !deleteMode && <>
+                        <button className={"button"} onClick={(e)=>navigate("/projects/new")}>+</button>
+                        <button className={"button"}onClick={(e)=>navigate("/import")}>Импорт</button>
+                    </>
+                    }
+                    {!deleteMode && <button className={"button"} onClick={exportHandler}>Экспорт</button>}
+                    {!exportMode && <button className={"button"} onClick={deleteHandler}>Удалить</button>}
+                    {(deleteMode || exportMode) &&
+                        <button className={"button"} onClick={cancelHandler}>Отмена</button>
+                    }
+                </div>
             </div>
         </div>
     )

@@ -17,11 +17,24 @@
   display: none;
 }
 button{
-  background-color: #F8F8F8;;
+  background-color: #F8F8F8;
 }
 button:hover{
   background-color: #D9D9D9;;
   transition: 0.1s ease-in;
+}
+
+.button{
+  padding: 5px;
+  border-radius: 2px;
+}
+
+.save-button{
+  background-color: #25b400;
+}
+
+.light-button:hover{
+  background-color: #F8F8F8;
 }
 
 
@@ -67,7 +80,7 @@ button:hover{
   width:48px;
   height:48px;
   border-radius: 50%;
-
+  border: 1px solid black;
 
 
 }
@@ -127,7 +140,6 @@ button:hover{
   height:48px;
   border: 0;
 }
-
 
 .floor-button:hover{
   transform: scale(105%);
