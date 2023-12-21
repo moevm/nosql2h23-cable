@@ -1,10 +1,11 @@
 import {redirect, useFetcher, useLoaderData, useNavigate, useParams, useRevalidator} from "react-router-dom";
 import {useDispatch, useSelector} from "react-redux";
 import {
-    addFloor,
+    addComponent,
+    addFloor, changeComponent,
     initProject,
     loadFloor,
-    loadProject,
+    loadProject, removeFloor,
     setAddress,
     setDate,
     setName, setSaved
@@ -16,6 +17,7 @@ import {apiHost} from "../../main.jsx";
 import NotFound from "../NotFound.jsx";
 import Editor from "./Editor.jsx";
 import routerSvg from "../../assets/router.svg"
+import useDebounce from "../../Debounce.jsx";
 
 function Components({components}){
     const navigate = useNavigate()
@@ -25,7 +27,7 @@ function Components({components}){
             <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
             <div>
-                {components ? components.map(x => {
+                {(components && components.components) ? components.components.map(x => {
                     return <div>
                         <span>{x.name}</span>
                     </div>
@@ -59,6 +61,9 @@ export async function newProjectLoader({params}){
 }
 
 function CableProperties({data}){
+    const dispatch = useDispatch()
+    const { fid } = useParams();
+
     return (
         <div className={"panel-bg flex flex-col w-full items-start p-8"}>
             <div className={"flex justify-center w-full"}>
@@ -66,15 +71,21 @@ function CableProperties({data}){
             </div>
             <div className={"flex flex-col w-full"}>
                 <span>Длина (м)</span>
-                <input/>
+                <input onChange={(e)=>
+                    dispatch(changeComponent({floor:+fid,component:{...data, length: e.currentTarget.value}}))}/>
                 <span>Тип</span>
-                <input value={data.model}/>
+                <input value={data.model} onChange={(e)=>
+                    dispatch(changeComponent({floor:+fid,component:{...data, model: e.currentTarget.value}}))}/>
             </div>
         </div>
 
     )
 }
 function RouterProperties({data}){
+    const dispatch = useDispatch()
+    const { fid } = useParams();
+    console.log(data)
+
     return (
         <div className={"w-full panel-bg flex flex-col items-start p-8"}>
             <div className={"flex justify-center w-full"}>
@@ -82,9 +93,11 @@ function RouterProperties({data}){
             </div>
             <div className={"flex flex-col w-full"}>
                 <span>Название</span>
-                <input value={data.name}/>
+                <input value={data.name} onChange={(e)=>
+                    dispatch(changeComponent({floor:+fid,component:{id:data.id,name:e.currentTarget.value}})) }/>
                 <span>Модель</span>
-                <input value={data.model}/>
+                <input value={data.model} onChange={(e)=>
+                    dispatch(changeComponent({floor:+fid,component:{id:data.id,model:e.currentTarget.value}})) }/>
             </div>
         </div>
 
@@ -94,7 +107,7 @@ function RouterProperties({data}){
 function Project(){
 
     const [projectLoaded,setProjectLoaded] = useState(false)
-
+    const [floorLoaded,setFloorLoaded] = useState(false)
     const { pid,fid } = useParams();
     const [floor,setFloor] = useState(+fid)
     const dispatch = useDispatch()
@@ -102,6 +115,7 @@ function Project(){
     const [selected,setSelected] = useState()
     const [error,setError] = useState(false)
     let projectState = useSelector(state => state.projectEditorState)
+    const saveRequest = useDebounce(projectState,2000)
     useEffect(()=>{
         if(projectLoaded){
             let floor = projectState.floors.find(x=>x.floor === +fid)
@@ -110,9 +124,17 @@ function Project(){
                 navigate(`/projects/${pid}/floor/1`)
             }
             else {
-                if(projectLoaded && !floor.components) {
-                    axios.get(`${apiHost}/project/${pid}/floor/${fid}`)
-                        .then(x=> dispatch(loadFloor(x.data)))
+                if(projectLoaded) {
+                    if(floor.components){
+                        setFloorLoaded(true)
+                    }
+                    else {
+                        axios.get(`${apiHost}/project/${pid}/floor/${fid}`)
+                            .then(x => {
+                                dispatch(loadFloor(x.data));
+                                setFloorLoaded(true)
+                            })
+                    }
                 }
             }
         }
@@ -129,13 +151,39 @@ function Project(){
         }
     },[projectLoaded,floor])
 
+    useEffect(()=>{
+        if(projectLoaded && saveRequest.saved === false){
+            axios.post(`${apiHost}/project/${pid}/save`,projectState.changed).then(x=>{
+                if(x.status === 201){
+                    dispatch(setSaved(true))
+                    navigate(`/projects/${x.data.id}/floor/${fid}`)
+                }
+                else{
+                    console.log("not saved")
+                }
+            })
+        }
+
+    },[saveRequest])
+
     if(error){
         return <NotFound/>
     }
 
+    const handleChange = (e) =>{
+        if(e.action==="add")
+        {
+            dispatch(addComponent({floor:+fid,component:e.component}))
+        }
+        console.log(e)
+    }
+
+
     let floors = [...projectState.floors]
+    let currentFloor = floors.find(x=>x.floor===+fid)
 
     const handleFloorButton = (event)=>{
+        setFloorLoaded(false)
         setFloor(+event.currentTarget.id)
         navigate(`/projects/${pid}/floor/${event.currentTarget.id}`)
     }
@@ -150,13 +198,14 @@ function Project(){
             }
         })
     }
-
     return (
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between light-panel-bg gap-2 h-full"}>
             <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
                 <button className={"button"} onClick={()=>navigate("/")}>{"<- К проектам"}</button>
-                <Components components={projectLoaded?floors.find(x=>x.floor === floor).components:[]}/>
-                {selected && (selected.type === "router"?<RouterProperties data={selected}/>:<CableProperties data={selected}/>)}
+                <Components components={floors.find(x=>x.floor === floor)}/>
+                {selected && (selected.type === "router"?
+                    <RouterProperties data={currentFloor.components.find(x=>x.id===selected.id)}/>:
+                    <CableProperties data={currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)}/>)}
             </div>
             <div style={{flex:"70%"}} className={"flex flex-col justify-between h-full"} >
                 <div className={"flex justify-between p-5"}>
@@ -170,16 +219,20 @@ function Project(){
                                onChange={(e)=>{dispatch(setAddress(e.currentTarget.value))}}
                         />
                     </div>
-                    <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
+                    <div  className={"flex flex-col"}>
+                        <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
+                        {pid!=="new"?( projectState.saved?"Изменения сохранены":"Сохранение..."):"Проект не сохранен"}
+                    </div>
+
                     <button className={"button"} onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
                 <div className={"flex flex-col panel-bg  w-full p-5 h-full"}>
-                    {projectState && <Editor data={projectState.floors[+fid]} onSelection={setSelected}/>}
+                    {floorLoaded && <Editor data={projectState.floors.find(x=>x.floor===+fid)} onSelection={setSelected} onChange={handleChange}/>}
                 </div>
                 <div className={"flex justify-between p-5"}>
                     <button className={"button"} >Отмена</button>
                     {pid!=="new" && <button className={"button"}  onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
-                    <button className={"button"}  onClick={handleSaveButton}>Сохранить</button>
+                    {pid === "new" && <button className={"button"}  onClick={handleSaveButton}>Сохранить</button>}
                 </div>
             </div>
             <div className={"w-20 flex flex-col justify-center items-center h-full"}>
@@ -204,6 +257,8 @@ function Project(){
                     )
                     }
                 </div>
+                <button className={"floor-button"}
+                        onClick={(e)=>dispatch(removeFloor(projectState.floors.length))}>-</button>
             </div>
         </div>
     )

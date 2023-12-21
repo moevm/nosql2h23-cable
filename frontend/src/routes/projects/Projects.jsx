@@ -174,7 +174,7 @@ function Projects() {
                 <div  className={"flex flex-col justify-start p-2 w-1/12"}>
                     {!exportMode && !deleteMode && <>
                         <button className={"button"} onClick={(e)=>navigate("/projects/new")}>+</button>
-                        <button className={"button"}onClick={(e)=>navigate("/import")}>Импорт</button>
+                        <button className={"button"} onClick={(e)=>navigate("/import")}>Импорт</button>
                     </>
                     }
                     {!deleteMode && <button className={"button"} onClick={exportHandler}>Экспорт</button>}
