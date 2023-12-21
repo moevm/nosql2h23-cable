@@ -12,6 +12,7 @@ class Editor{
         this.mousePressed = false
         this.cableStarted = undefined
         this.grabOffset = {x:0,y:0}
+        this.startCoord={x:0,y:0}
         this.selectedComponent = undefined
         this.areaSelectionCallback=undefined
         this.selectionCallback=undefined
@@ -78,6 +79,7 @@ class Editor{
         }
         this.selectedComponent = component
         if(this.selectionCallback){
+            console.log(component)
             this.selectionCallback(component)
         }
         if(this.areaSelectionCallback){
@@ -105,6 +107,7 @@ class Editor{
         let pos = this.toSpace(this.getCanvasCoordinates(e))
         if(this.mousePressed ) return
         this.mousePressed = true
+        this.startCoord=this.getCanvasCoordinates(e)
         if(this.tool===0){
             this.cableStarted=undefined
             let c = this.getElementNearPos(pos, 10)
@@ -158,10 +161,13 @@ class Editor{
     }
     mouseup(e)
     {
+        let pos = this.getCanvasCoordinates(e)
         if(this.mousePressed) {
             this.mousePressed = false
             this.selectionArea = undefined
-            if (this.selectedComponent) {
+            if (this.selectedComponent &&
+                (this.startCoord.x!==pos.x || this.startCoord.y!==pos.y) &&
+                this.selectedComponent.type !== "cable") {
                 if (this.componentsCallback) {
                     /*this.componentsCallback({
                         components: this.components.map(x => {
@@ -169,7 +175,7 @@ class Editor{
                         }), cables: this.cables
                     }) */
                     console.log("called")
-                    this.componentsCallback({action: "set", component: this.selectedComponent})
+                    this.componentsCallback({action: "set", component: {...this.selectedComponent}})
                 }
             }
 
@@ -241,15 +247,19 @@ class Editor{
     }
 
     addComponent(pos){
+        let id=this.newId()
         let r = {
             type:"router",
-            id: this.newId(),
+            name:`Маршрутизатор №${id}`,
+            model:"default",
+            id: id,
             pos: pos
         }
         this.components.push(r)
         if(this.componentsCallback){
             //this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
-            this.componentsCallback({action:"add",component:r})
+            this.componentsCallback({action:"add",component:{...r}})
+            console.log(this.components)
         }
 
         this.draw()
@@ -257,18 +267,17 @@ class Editor{
 
     addCable(comp1,comp2){
 
-        this.cables.push({
+        let r = {
             type:"cable",
+            len: 0,
+            model:"default",
             start:comp1.id,
             end:comp2.id
-        })
+        }
+        this.cables.push(r)
         if(this.componentsCallback){
             //this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
-            this.componentsCallback({action:"add",component:{
-                    type:"cable",
-                    start:comp1.id,
-                    end:comp2.id
-                }})
+            this.componentsCallback({action:"add",component:{...r}})
         }
         this.draw()
     }
@@ -416,13 +425,14 @@ class Editor{
     removeSelected(){
         this.components=this.components.filter(x => !this.selectionArray.includes(x))
         this.cables=this.cables.filter(x => !this.selectionArray.find(y=> y.id===x.start ||  y.id===x.end || x===y))
-        this.selectionArray=[]
+
         if(this.areaSelectionCallback){
             this.areaSelectionCallback(this.selectionArray)
         }
         if(this.componentsCallback){
-            this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
+            this.componentsCallback({action: "del", components: this.selectionArray})
         }
+        this.selectionArray=[]
         this.draw()
     }
 
@@ -458,7 +468,7 @@ class Editor{
     loadFloor({components}){
         let copy = components.map(x=>{return {...x}})
         this.cables = copy.filter(x=>x.type === "cable")
-        this.components=copy.filter(x=>x.type !== "cable")
+        this.components = copy.filter(x=>x.type !== "cable")
     }
 
 }

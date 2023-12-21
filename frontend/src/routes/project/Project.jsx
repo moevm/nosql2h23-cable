@@ -5,7 +5,7 @@ import {
     addFloor, changeComponent,
     initProject,
     loadFloor,
-    loadProject, removeFloor,
+    loadProject, removeComponents, removeFloor,
     setAddress,
     setDate,
     setName, setSaved
@@ -71,8 +71,8 @@ function CableProperties({data}){
             </div>
             <div className={"flex flex-col w-full"}>
                 <span>Длина (м)</span>
-                <input onChange={(e)=>
-                    dispatch(changeComponent({floor:+fid,component:{...data, length: e.currentTarget.value}}))}/>
+                <input value={data.len} onChange={(e)=>
+                    dispatch(changeComponent({floor:+fid,component:{...data, len: e.currentTarget.value}}))}/>
                 <span>Тип</span>
                 <input value={data.model} onChange={(e)=>
                     dispatch(changeComponent({floor:+fid,component:{...data, model: e.currentTarget.value}}))}/>
@@ -84,14 +84,13 @@ function CableProperties({data}){
 function RouterProperties({data}){
     const dispatch = useDispatch()
     const { fid } = useParams();
-    console.log(data)
-
     return (
         <div className={"w-full panel-bg flex flex-col items-start p-8"}>
             <div className={"flex justify-center w-full"}>
                 <span>Параметры маршрутизатора</span>
             </div>
             <div className={"flex flex-col w-full"}>
+                <span>id {data.id}</span>
                 <span>Название</span>
                 <input value={data.name} onChange={(e)=>
                     dispatch(changeComponent({floor:+fid,component:{id:data.id,name:e.currentTarget.value}})) }/>
@@ -116,6 +115,9 @@ function Project(){
     const [error,setError] = useState(false)
     let projectState = useSelector(state => state.projectEditorState)
     const saveRequest = useDebounce(projectState,2000)
+
+    console.log(projectState)
+
     useEffect(()=>{
         if(projectLoaded){
             let floor = projectState.floors.find(x=>x.floor === +fid)
@@ -171,9 +173,18 @@ function Project(){
     }
 
     const handleChange = (e) =>{
+
         if(e.action==="add")
         {
             dispatch(addComponent({floor:+fid,component:e.component}))
+        }
+        if(e.action==="set")
+        {
+            dispatch(changeComponent({floor:+fid,component:e.component}))
+        }
+        if(e.action==="del")
+        {
+            dispatch(removeComponents({floor:+fid,components:e.components}))
         }
         console.log(e)
     }
@@ -198,14 +209,21 @@ function Project(){
             }
         })
     }
+    let selectedRouter
+    let selectedCable
+    if(currentFloor.components && selected){
+
+    selectedRouter = currentFloor.components.find(x=>x.id===selected.id)
+    selectedCable = currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)
+    }
     return (
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between light-panel-bg gap-2 h-full"}>
             <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
                 <button className={"button"} onClick={()=>navigate("/")}>{"<- К проектам"}</button>
                 <Components components={floors.find(x=>x.floor === floor)}/>
-                {selected && (selected.type === "router"?
-                    <RouterProperties data={currentFloor.components.find(x=>x.id===selected.id)}/>:
-                    <CableProperties data={currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)}/>)}
+                {selectedRouter && selectedRouter.type==="router" && <RouterProperties data={selectedRouter}/>}
+                {selectedCable && selectedCable.type==="cable" && <CableProperties data={selectedCable}/>}
+
             </div>
             <div style={{flex:"70%"}} className={"flex flex-col justify-between h-full"} >
                 <div className={"flex justify-between p-5"}>

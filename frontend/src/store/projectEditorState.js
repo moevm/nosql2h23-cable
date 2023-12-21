@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
+import {act} from "react-dom/test-utils";
 
 const initialState = {
     id: undefined,
@@ -72,18 +73,23 @@ export const projectEditorSlice = createSlice({
         },
         changeComponent: (state, action) => {
             state.saved = false
-            let compList = state.floors.find(x=>x.floor === action.payload.floor).components
-            let comp =
-                compList.find(x=>{return action.payload.component.type==="router"?(x.id === action.payload.component.id):
-                    (x.start === action.payload.component.start && x.end === action.payload.component.end)})
-            compList=compList.filter(x=>x!==comp)
-            compList.push({...comp,...action.payload.component})
-            console.log(compList)
-            state.floors.find(x=>x.floor === action.payload.floor).components=compList
+            let floor = state.floors.find(x=>x.floor === action.payload.floor)
             state.changed.push({action:"set",field:"component",value:
                     {floor: action.payload.floor,
                         component: action.payload.component}})
-            return state
+
+            if(action.payload.component.id !== undefined){
+                let c=floor.components.find(x=>x.id===action.payload.component.id)
+                floor.components = [...floor.components.filter(x=>
+                    x.type !== "router" ||
+                    x.id!==action.payload.component.id),{...c,...action.payload.component}]
+            }
+            else {
+                let c=floor.components.find(x=>x.start===action.payload.component.start && x.end===action.payload.component.end)
+                floor.components = [...floor.components.filter(x=>
+                    x.type !== "cable" &&
+                    x.start!==action.payload.component.start || x.end!==action.payload.component.end),{...c,...action.payload.component}]
+            }
 
         },
         addComponent: (state, action) => {
@@ -94,20 +100,24 @@ export const projectEditorSlice = createSlice({
                         component: action.payload.component}})
 
         },
-        removeComponent: (state, action) => {
+        removeComponents: (state, action) => {
             state.saved = false
-            //находим список компонентов на этаже
-            let compList = state.floors.find(x=>x.floor === action.payload.floor).components
-            //ищем компонент по айди или айди начала и конца если кабель
-            let comp =
-                compList.find(x=>{return action.payload.component.type==="router"?(x.id === action.payload.component.id):
-                    (x.start === action.payload.component.start && x.end === action.payload.component.end)})
-            //удаляем
-            compList=compList.filter(x=>x!==comp)
-            state.changed.push({action:"del",field:"component",value:
-                    {floor: action.payload.floor,
-                        component: action.payload.component}})
 
+            // this.components=this.components.filter(x => !this.selectionArray.includes(x))
+            //         this.cables=this.cables.filter(x => !this.selectionArray.find(y=> y.id===x.start ||  y.id===x.end || x===y))
+            //
+
+            let floor = state.floors.find(x=>x.floor === action.payload.floor)
+            action.payload.components.forEach(x=>{
+                state.changed.push({action:"del",field:"component",value:
+                        {floor: action.payload.floor,
+                            component: x}})
+            })
+            let routers = action.payload.components.filter(x=>x.type==="router").map(x=>x.id)
+            floor.components = floor.components.filter(x => !routers.includes(x.id))
+            let cables = action.payload.components.filter(x=>x.type==="cable")
+            floor.components = floor.components.filter(x => !routers.includes(x.start) && !routers.includes(x.end))
+            floor.components = floor.components.filter(x => !cables.find(y=>y.start===x.start && y.end===x.end))
         },
         removeFloor: (state, action) => {
             state.saved = false
@@ -128,7 +138,7 @@ export const {
     addFloor,
     loadFloor,
     addComponent,
-    removeComponent,
+    removeComponents,
     changeComponent,
     removeFloor
 } = projectEditorSlice.actions
