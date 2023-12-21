@@ -12,8 +12,10 @@ export class AppController {
   ) {
 
     (async () => {
-      const response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
-      const projectList = response.records.map(x => x.get(0).properties)
+      const response = await this.neo4jService.read(`
+      MATCH (n:Project) return n
+      `)
+      const projectList = response.records.map(x => x.get('n').properties)
 
       if (projectList.length == 0)
       {
@@ -22,6 +24,15 @@ export class AppController {
         projects.map(async p => {
             await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
             const floors = p.floors
+            const comments = p.comments
+
+            comments.map(async c => {
+              await this.neo4jService.write(`
+              MATCH(p:Project {id: ${p.id}}) 
+              CREATE (p) <-[:COMMENT]- (c:Comment {comment_id: ${c.comment_id}, 
+                comment_text: "${c.comment_text}", comment_date: datetime("${c.comment_date}")})
+              `)
+            })
 
             floors.map(async f => {
               await this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
@@ -35,63 +46,61 @@ export class AppController {
   }
 
   @Get("/projects")
-  async getProjects(@Query('mode') mode: Number, @Query('query') query: String): Promise<any> {
+  async getProjects(@Query() query): Promise<any> {
 
     let response
-    if (mode === undefined || query === "")
+    
     {
-      response = await this.neo4jService.read(`MATCH (n:Project) RETURN n`)
-    }
-    else
-    {
-      let findString: string;
+      let queryList = []
+      if (query.name !== undefined) queryList.push(`n.name contains "${query.name}"`)
+      if (query.address !== undefined) queryList.push(`n.address contains "${query.address}"`)
+      if (query.fromDate !== undefined) queryList.push(`n.DateOfChanges >= datetime("${query.fromDate}")`)
+      if (query.toDate !== undefined) queryList.push(`n.DateOfChanges <= datetime("${query.toDate}")`)
+      if (query.fromFloor !== undefined) queryList.push(`countFloor >= ${query.fromFloor}`)
+      if (query.toFloor !== undefined) queryList.push(`countFloor <= ${query.toFloor}`)
+      if (query.fromComment !== undefined) queryList.push(`countComment >= ${query.fromComment}`)
+      if (query.toComment !== undefined) queryList.push(`countComment <= ${query.toComment}`)
 
-      let timzone = Intl.DateTimeFormat().resolvedOptions().timeZone
+      let whereStr = ""
 
-      switch (+mode)
+      if (queryList.length > 0)
       {
-        case 0:
-          findString = `MATCH (n) RETURN n limit 0`
-          break
-        case 1:
-          findString = `Match (n:Project) where n.name contains "${query}" return n`
-          break
-        case 2:
-          findString = `Match (n:Project) where n.address contains "${query}" return n`
-          break
-        case 3:
-          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
-          break
-        case 4:
-          findString = `Match (n:Project) where toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
-          break
-        case 5:
-          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" return n`
-          break
-        case 6:
-          findString = `Match (n:Project) where n.address contains "${query}" or toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
-          break
-        case 7:
-          findString = `Match (n:Project) where n.address contains "${query}" or n.name contains "${query}" or toString(datetime({datetime: n.DateOfChange, timezone: "${timzone}"})) contains "${query}" return n`
-          break        
-
+        whereStr += "where "
+        for (let i = 0; i < queryList.length - 1; i++)
+        {
+          whereStr += queryList[i] + " and "
+        }
+        whereStr += queryList[queryList.length - 1]
       }
-      response = await this.neo4jService.read(findString)
+
+      response = await this.neo4jService.read(`
+      OPTIONAL MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
+      OPTIONAL MATCH (n)<-[k:COMMENT]-(b:Comment) with n, countFloor, count(b) as countComment 
+      ${whereStr}
+      RETURN n, countFloor, countComment
+      `)
     }
 
-    const projectList = response.records.map(x => x.get(0).properties)
+    const projectList = response.records
+
 
     return {
       page: 1,
       total: projectList.length,
       projects: projectList.map(x => {
+        let prop = x.get('n').properties
         return {
-          id: x.id.toNumber(),
-          name: x.name,
-          date: x.DateOfChange.toStandardDate(),
-          address: x.address
+          id: prop.id.toNumber(),
+          name: prop.name,
+          date: prop.DateOfChange.toStandardDate(),
+          saved: false,
+          address: prop.address,
+          comment_count: x.get('countComment').toNumber(),
+          floors: Array.from({length: x.get('countFloor').toNumber()}, (_, i) => {return {floor: i + 1, components: []}}),
+          changed: []
         }
-      })
+      }),
+
     }
   }
 
