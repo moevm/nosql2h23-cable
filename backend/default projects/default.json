@@ -86,7 +86,7 @@
       ]
     }
   ],
-  "routers": [
+  "routerinfo": [
     {
       "routerinfo_id": 1602435457235,
       "photo": "",
@@ -104,7 +104,7 @@
       "DateOfCreation": "2020-10-11T10:17:37.235Z"
     }
   ],
-  "cables": [
+  "cableinfo": [
     {
       "cableinfo_id": 1602492257235,
       "photo": "",

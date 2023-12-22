@@ -41,8 +41,40 @@ export class AppController {
             })
         })
       }
+
+      const routerinfo = defaultData.routerinfo
+      const cableinfo = defaultData .cableinfo
+
+      cableinfo.map(async cable =>{
+        await this.neo4jService.write(`
+        merge (n:CableInfo { cableinfo_id: ${cable.cableinfo_id}, photo: "${cable.photo}", description: "${cable.description}", type: "${cable.type}", DateOfCreation: datetime("${cable.DateOfCreation}") })
+        return n
+        `)
+      })
+
+      routerinfo.map(async router =>{
+        await this.neo4jService.write(`
+        merge (n:RouterInfo { cableinfo_id: ${router.routerinfo_id}, photo: "${router.photo}", description: "${router.description}", model: "${router.model}", DateOfCreation: datetime("${router.DateOfCreation}"), port_count: ${router.port_count} })
+        return n
+        `)
+      })
+
     })()
 
+  }
+
+  @Get("/routerinfos")
+  async getRouterInfos(): Promise<any> {
+    return {
+      routerinfos: defaultData.routerinfo
+    }
+  }
+
+  @Get("/cableinfos")
+  async getCableInfos(): Promise<any> {
+    return {
+      cableinfos: defaultData.cableinfo
+    }
   }
 
   @Get("/projects")
@@ -118,7 +150,7 @@ export class AppController {
 
   @Get("/project/:id/floor/:floor")
   async getComponents(@Param('id') id,@Param('floor') floor): Promise<any> {
-    console.log(id)
+
     const response = await this.neo4jService.read(
         `match (p:Project {id: ${id}})-[r:FLOOR]-(f:Floor {number: ${floor}})-[:ROUTER]-(c)
          return c`)
@@ -135,7 +167,7 @@ export class AppController {
       id:props.id.toNumber(),
       x:undefined,
       y:undefined,
-      pos: {x:props.x,y:props.y},
+      pos: {x:props.x.toNumber(),y:props.y.toNumber()},
       type: x.get('c').labels[0].toLowerCase()}})
 
     const cables = response2.records.map(x=>
@@ -164,8 +196,9 @@ export class AppController {
         if(c.field==="floor"){
           await this.neo4jService.write(
               `match (p:Project {id: ${id}})
-          optional match (p)-[r]-(t:Floor {number: ${c.value.floor}})-[q]-(c)
-          delete r,t,q,c`)
+              optional match (p)-[r]-(t:Floor {number: ${c.value.floor}})
+              optional match (t)<-[q]-(c)
+              detach delete r,t,q,c`)
         }
         else if(c.field==="component"){
           if(c.value.component.id!==undefined){
