@@ -122,14 +122,147 @@ export class AppController {
 
   @Get("/project/:id/floor/:floor")
   async getComponents(@Param('id') id,@Param('floor') floor): Promise<any> {
+    console.log(id)
+    const response = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})-[r:FLOOR]-(f:Floor {number: ${floor}})-[:ROUTER]-(c)
+         return c`)
+
+    const response2 = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${floor}})-[:CABLE]-(c)
+        optional match (r1:Router)-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router)
+         return c,r1,r2`)
+
+    const components = response.records.map(x=>
+    {
+      let props = x.get('c').properties
+      return {...props,
+      id:props.id.toNumber(),
+      x:undefined,
+      y:undefined,
+      pos: {x:props.x,y:props.y},
+      type: x.get('c').labels[0].toLowerCase()}})
+
+    const cables = response2.records.map(x=>
+    {
+      let props = x.get('c').properties
+      return {...props,
+        len: props.len.toNumber(),
+        start: x.get('r1').properties.id.toNumber(),
+        end: x.get('r2').properties.id.toNumber(),
+        type: x.get('c').labels[0].toLowerCase()}}).filter(x=>x.start<x.end)
+    console.log(cables)
     return {
       floor: +floor,
-      components: []
+      components: [...components,...cables]
     }
   }
 
   @Post("/project/:id/save")
   async saveChanges(@Body() changes, @Param('id') id): Promise<any> {
+
+
+    for(let c of changes){
+      if (c.action==="del"){
+        //удалить этаж
+        //удалить компонент
+        if(c.field==="floor"){
+          await this.neo4jService.write(
+              `match (p:Project {id: ${id}})
+          optional match (p)-[r]-(t:Floor {number: ${c.value.floor}})-[q]-(c)
+          delete r,t,q,c`)
+        }
+        else if(c.field==="component"){
+          if(c.value.component.id!==undefined){
+            await this.neo4jService.write(
+                `match (p:Project {id: ${id}})
+          optional match (p)-[]-(t:Floor {number: ${c.value.floor}})-[q]-(c  {id: ${c.value.component.id}})
+          optional match (c)-[:CONNECTED]-(r)
+          detach delete c,r`)
+          }
+          else {
+            await this.neo4jService.write(
+                  `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})-[:CABLE]-(c)
+                  match (r1:Router {id:${c.value.component.start}})-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router {id:${c.value.component.end}})
+                  detach delete c`)
+          }
+        }
+      }
+      else if (c.action==="add"){
+        if(c.field==="floor"){
+          await this.neo4jService.write(`MATCH(p:Project {id: ${id}}) 
+            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${c.value.floor}, plan: ''})
+          `)
+        }
+        else if(c.field==="component"){
+          if(c.value.component.type==="router"){
+            await this.neo4jService.write(`MATCH (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})
+            CREATE (f) <-[:ROUTER]- (r:Router {id: ${c.value.component.id},
+             x:${c.value.component.pos.x},
+             y:${c.value.component.pos.y},
+             name:"${c.value.component.name}",
+             model:"${c.value.component.model}"
+             })
+          `)
+          }
+          else{
+            await this.neo4jService.write(`MATCH (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})
+            MATCH (f)-[:ROUTER]-(r1:Router {id:${c.value.component.start}})
+            MATCH (f)-[:ROUTER]-(r2:Router {id:${c.value.component.end}})
+            CREATE (f) <-[:CABLE]- (r:Cable {
+             len: ${c.value.component.len},
+             model: "${c.value.component.model}"
+             })
+             CREATE (r1)-[:CONNECTED]->(r)
+             CREATE (r2)-[:CONNECTED]->(r)
+          `)
+          }
+        }
+      }
+      else if (c.action==="set"){
+        if(c.field==="name") {
+          await this.neo4jService.write(`MATCH(p:Project {id: ${id}}) SET p.name = "${c.value}"`)
+        }
+        else if(c.field==="address") {
+          await this.neo4jService.write(`MATCH(p:Project {id: ${id}}) SET p.address = "${c.value}"`)
+        }
+        else if(c.field==="component") {
+          if(c.value.component.type==="router"){
+            if(c.value.component.name){
+              await this.neo4jService.write(`MATCH (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})
+              MATCH (f) <-[:ROUTER]- (r:Router {id: ${c.value.component.id}})
+               SET r.name = "${c.value.component.name}"`)
+            }
+            if(c.value.component.model){
+              await this.neo4jService.write(`MATCH (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})
+            MATCH (f) <-[:ROUTER]- (r:Router {id: ${c.value.component.id}})
+             SET r.model = "${c.value.component.model}"`)
+            }
+            if(c.value.component.pos){
+              await this.neo4jService.write(`MATCH (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})
+            MATCH (f) <-[:ROUTER]- (r:Router {id: ${c.value.component.id}})
+             SET r.x = ${c.value.component.pos.x}
+             SET r.y = ${c.value.component.pos.y}`)
+            }
+          }
+          else {
+            let req = `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor {number: ${c.value.floor}})-[:CABLE]-(c)
+                  match (r1:Router {id:${c.value.component.start}})-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router {id:${c.value.component.end}})\n`
+            if(c.value.component.len) {
+              req+=`SET c.len = ${+c.value.component.len}\n`
+            }
+            if(c.value.component.model){
+              req+=`SET c.model = "${c.value.component.model}"\n`
+            }
+            await this.neo4jService.write(req)
+          }
+
+        }
+      }
+    }
+    return {
+      id: id
+    }
+
     const name = changes.name
     const address = changes.address
     const floors = changes.floors
@@ -137,22 +270,6 @@ export class AppController {
     if (id == 'new') {
       curId = Date.now()
       const response = await this.neo4jService.write(`CREATE (p:Project {id: ${curId},address: "${address}",name: "${name}",DateOfChange: datetime("${new Date().toISOString()}")})`)
-    }
-    else
-    {
-      if (name) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.name = "${name}"`)
-    }
-
-    if (address) await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) SET p.address = "${address}"`)
-
-    if (floors) floors.forEach(async floor => {
-      await this.neo4jService.write(`MATCH(p:Project {id: ${curId}}) 
-      CREATE (p) <-[:FLOOR]- (f:Floor {number: ${floor.floor}, plan: ''})
-      `)
-    })
-
-    return {
-      id: curId
     }
   }
 

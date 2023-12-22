@@ -63,6 +63,24 @@ export async function newProjectLoader({params}){
 function CableProperties({data}){
     const dispatch = useDispatch()
     const { fid } = useParams();
+    const [len,setLen]=useState(0)
+    const lenReq = useDebounce(len,500)
+    const [model,setModel]=useState("default")
+    const modelReq = useDebounce(model,500)
+
+    useEffect(()=>{
+        setModel(data.model)
+        setLen((data.len))
+    },[])
+
+    useEffect(()=>{
+        dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", len: lenReq}}))
+        console.log("est")
+    },[lenReq])
+    useEffect(()=>{
+        dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", model: modelReq}}))
+    },[modelReq])
+
 
     return (
         <div className={"panel-bg flex flex-col w-full items-start p-8"}>
@@ -71,11 +89,9 @@ function CableProperties({data}){
             </div>
             <div className={"flex flex-col w-full"}>
                 <span>Длина (м)</span>
-                <input value={data.len} onChange={(e)=>
-                    dispatch(changeComponent({floor:+fid,component:{...data, len: e.currentTarget.value}}))}/>
+                <input value={len} onChange={(e)=> setLen(e.currentTarget.value)}/>
                 <span>Тип</span>
-                <input value={data.model} onChange={(e)=>
-                    dispatch(changeComponent({floor:+fid,component:{...data, model: e.currentTarget.value}}))}/>
+                <input value={model} onChange={(e)=>setModel(e.currentTarget.value)}/>
             </div>
         </div>
 
@@ -84,19 +100,35 @@ function CableProperties({data}){
 function RouterProperties({data}){
     const dispatch = useDispatch()
     const { fid } = useParams();
+
+    const [name,setName]=useState("")
+    const nameReq = useDebounce(name,500)
+    const [model,setModel]=useState("default")
+    const modelReq = useDebounce(model,500)
+
+    useEffect(()=>{
+        setName(data.name)
+        setModel((data.model))
+    },[])
+
+    useEffect(()=>{
+        dispatch(changeComponent({floor:+fid,component:{id:data.id,type:"router",name:nameReq}}))
+    },[nameReq])
+    useEffect(()=>{
+        dispatch(changeComponent({floor:+fid,component:{id:data.id,type:"router",model:modelReq}}))
+    },[modelReq])
+
+
     return (
         <div className={"w-full panel-bg flex flex-col items-start p-8"}>
             <div className={"flex justify-center w-full"}>
                 <span>Параметры маршрутизатора</span>
             </div>
             <div className={"flex flex-col w-full"}>
-                <span>id {data.id}</span>
                 <span>Название</span>
-                <input value={data.name} onChange={(e)=>
-                    dispatch(changeComponent({floor:+fid,component:{id:data.id,name:e.currentTarget.value}})) }/>
+                <input value={name} onChange={(e)=>setName(e.currentTarget.value)}/>
                 <span>Модель</span>
-                <input value={data.model} onChange={(e)=>
-                    dispatch(changeComponent({floor:+fid,component:{id:data.id,model:e.currentTarget.value}})) }/>
+                <input value={model} onChange={(e)=>setModel(e.currentTarget.value)}/>
             </div>
         </div>
 
@@ -116,12 +148,18 @@ function Project(){
     let projectState = useSelector(state => state.projectEditorState)
     const saveRequest = useDebounce(projectState,2000)
 
-    console.log(projectState)
+    const [name,setNameState] =useState("")
+    const [address,setAddressState] =useState("")
+
+    const debounceName = useDebounce(name,500)
+    const debounceAddress = useDebounce(address,500)
 
     useEffect(()=>{
         if(projectLoaded){
             let floor = projectState.floors.find(x=>x.floor === +fid)
 
+            setNameState(projectState.name)
+            setAddressState(projectState.address)
             if(!floor){
                 navigate(`/projects/${pid}/floor/1`)
             }
@@ -168,6 +206,14 @@ function Project(){
 
     },[saveRequest])
 
+    useEffect(()=>{
+        dispatch(setName(debounceName))
+    },[debounceName])
+    useEffect(()=>{
+        dispatch(setAddress(debounceAddress))
+    },[debounceAddress])
+
+
     if(error){
         return <NotFound/>
     }
@@ -211,7 +257,7 @@ function Project(){
     }
     let selectedRouter
     let selectedCable
-    if(currentFloor.components && selected){
+    if(floorLoaded && currentFloor.components && selected){
 
     selectedRouter = currentFloor.components.find(x=>x.id===selected.id)
     selectedCable = currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)
@@ -229,12 +275,12 @@ function Project(){
                 <div className={"flex justify-between p-5"}>
                     <div  className={"flex flex-col"}>
                         <input type={"text"} className={"text-2xl light-panel-bg"}
-                               value={projectState.name}
-                               onChange={(e)=>{dispatch(setName(e.currentTarget.value))}}
+                               value={name}
+                               onChange={(e)=>{setNameState(e.currentTarget.value)}}
                         />
                         <input type={"text"} className={"light-panel-bg"}
-                               value={projectState.address}
-                               onChange={(e)=>{dispatch(setAddress(e.currentTarget.value))}}
+                               value={address}
+                               onChange={(e)=>{setAddressState(e.currentTarget.value)}}
                         />
                     </div>
                     <div  className={"flex flex-col"}>
