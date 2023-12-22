@@ -22,7 +22,7 @@ import useDebounce from "../../Debounce.jsx";
 function Components({components,onSelected,selected}){
     const navigate = useNavigate()
     const {pid} = useParams()
-    console.log(selected)
+
     return (
         <div className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
@@ -55,7 +55,6 @@ export async function projectLoader({params}){
 }
 
 export async function newProjectLoader({params}){
-    console.log("new")
     store.dispatch(initProject());
     return redirect(`/projects/new/floor/1`)
 
@@ -76,7 +75,6 @@ function CableProperties({data}){
 
     useEffect(()=>{
         dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", len: lenReq}}))
-        console.log("est")
     },[lenReq])
     useEffect(()=>{
         dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", model: modelReq}}))
@@ -156,11 +154,12 @@ function Project(){
     const debounceAddress = useDebounce(address,500)
 
     useEffect(()=>{
+        setNameState(projectState.name)
+        setAddressState(projectState.address)
         if(projectLoaded){
             let floor = projectState.floors.find(x=>x.floor === +fid)
 
-            setNameState(projectState.name)
-            setAddressState(projectState.address)
+
             if(!floor){
                 navigate(`/projects/${pid}/floor/1`)
             }
@@ -233,7 +232,6 @@ function Project(){
         {
             dispatch(removeComponents({floor:+fid,components:e.components}))
         }
-        console.log(e)
     }
 
 
