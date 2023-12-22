@@ -47,39 +47,35 @@ export class AppController {
 
   @Get("/projects")
   async getProjects(@Query() query): Promise<any> {
-
-    let response
     
+    let queryList = []
+    if (query.name !== undefined) queryList.push(`n.name contains "${query.name}"`)
+    if (query.address !== undefined) queryList.push(`n.address contains "${query.address}"`)
+    if (query.fromDate !== undefined) queryList.push(`n.DateOfChange >= datetime("${query.fromDate}")`)
+    if (query.toDate !== undefined) queryList.push(`n.DateOfChange <= datetime("${query.toDate}")`)
+    if (query.fromFloor !== undefined) queryList.push(`countFloor >= ${query.fromFloor}`)
+    if (query.toFloor !== undefined) queryList.push(`countFloor <= ${query.toFloor}`)
+    if (query.fromComment !== undefined) queryList.push(`countComment >= ${query.fromComment}`)
+    if (query.toComment !== undefined) queryList.push(`countComment <= ${query.toComment}`)
+
+    let whereStr = ""
+
+    if (queryList.length > 0)
     {
-      let queryList = []
-      if (query.name !== undefined) queryList.push(`n.name contains "${query.name}"`)
-      if (query.address !== undefined) queryList.push(`n.address contains "${query.address}"`)
-      if (query.fromDate !== undefined) queryList.push(`n.DateOfChange >= datetime("${query.fromDate}")`)
-      if (query.toDate !== undefined) queryList.push(`n.DateOfChange <= datetime("${query.toDate}")`)
-      if (query.fromFloor !== undefined) queryList.push(`countFloor >= ${query.fromFloor}`)
-      if (query.toFloor !== undefined) queryList.push(`countFloor <= ${query.toFloor}`)
-      if (query.fromComment !== undefined) queryList.push(`countComment >= ${query.fromComment}`)
-      if (query.toComment !== undefined) queryList.push(`countComment <= ${query.toComment}`)
-
-      let whereStr = ""
-
-      if (queryList.length > 0)
+      whereStr += "where "
+      for (let i = 0; i < queryList.length - 1; i++)
       {
-        whereStr += "where "
-        for (let i = 0; i < queryList.length - 1; i++)
-        {
-          whereStr += queryList[i] + " and "
-        }
-        whereStr += queryList[queryList.length - 1]
+        whereStr += queryList[i] + " and "
       }
-
-      response = await this.neo4jService.read(`
-      OPTIONAL MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
-      OPTIONAL MATCH (n)<-[k:COMMENT]-(b:Comment) with n, countFloor, count(b) as countComment 
-      ${whereStr}
-      RETURN n, countFloor, countComment
-      `)
+      whereStr += queryList[queryList.length - 1]
     }
+
+    const response = await this.neo4jService.read(`
+    OPTIONAL MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
+    OPTIONAL MATCH (n)<-[k:COMMENT]-(b:Comment) with n, countFloor, count(b) as countComment 
+    ${whereStr}
+    RETURN n, countFloor, countComment
+    `)
 
     const projectList = response.records
 
@@ -285,10 +281,33 @@ export class AppController {
   }
 
   @Get("/project/:id/comments")
-  async getComments(@Param('id') id): Promise<any>
+  async getComments(@Param('id') id, @Query() query): Promise<any>
   {
-    const response = await this.neo4jService.read(`MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) RETURN c`)
-    const listOfComments = response.records.map(x => x.get(0).properties)
+
+    let queryList = []
+    if (query.content !== undefined) queryList.push(`c.comment_text contains "${query.content}"`)
+    if (query.fromDate !== undefined) queryList.push(`c.comment_date >= datetime("${query.fromDate}")`)
+    if (query.toDate !== undefined) queryList.push(`c.comment_date <= datetime("${query.toDate}")`)
+
+    let whereStr = ""
+
+    if (queryList.length > 0)
+    {
+      whereStr += "where "
+      let len = queryList.length
+      queryList.map(x => {
+        whereStr += x
+        whereStr += len > 1 ? " and ": "" 
+        len--
+      })
+    }
+
+    const response = await this.neo4jService.read(`
+    MATCH (n:Project {id: ${id}})<-[f:COMMENT]-(c:Comment) 
+    ${whereStr}
+    RETURN c
+    `)
+    const listOfComments = response.records.map(x => x.get('c').properties)
     return {
       comments: listOfComments.map(x => {return {date: x.comment_date.toStandardDate(), text: x.comment_text}})
     }
