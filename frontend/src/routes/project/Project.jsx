@@ -27,10 +27,16 @@ function Components({components,onSelected,selected}){
         <div className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
-            <div className={"flex flex-col justify-start items-start"}>
+            <div className={"flex flex-col justify-start"}>
                 {(components && components.components) ? components.components.filter(x=>x.name).sort((a,b)=>a.name.localeCompare(b.name)).map(x => {
                     return <div>
-                        <button className={"light-button"} style={{backgroundColor:(selected &&  x.id===selected.id)?"blue":"#D9D9D9"}} onClick={()=>onClick(x.id)}>{x.name}</button>
+                        {
+                            (selected &&  x.id===selected.id)?
+
+                                <button className={"gray-button w-full p-2"} onClick={()=>onSelected(x.id)}>{x.name}</button>:
+                                <button className={"light-button w-full p-2"} onClick={()=>onSelected(x.id)}>{x.name}</button>
+
+                            }
                     </div>
                 }) : ""}
             </div>
@@ -104,6 +110,8 @@ function RouterProperties({data}){
     const nameReq = useDebounce(name,500)
     const [model,setModel]=useState("default")
     const modelReq = useDebounce(model,500)
+    const [changed,setChanged]=useState(false)
+
 
     useEffect(()=>{
         setName(data.name)
@@ -111,10 +119,17 @@ function RouterProperties({data}){
     },[])
 
     useEffect(()=>{
-        dispatch(changeComponent({floor:+fid,component:{id:data.id,type:"router",name:nameReq}}))
+        if(changed) {
+            dispatch(changeComponent({floor: +fid, component: {id: data.id, type: "router", name: nameReq}}))
+            setChanged(false)
+        }
     },[nameReq])
+
     useEffect(()=>{
-        dispatch(changeComponent({floor:+fid,component:{id:data.id,type:"router",model:modelReq}}))
+        if(changed) {
+            dispatch(changeComponent({floor: +fid, component: {id: data.id, type: "router", model: modelReq}}))
+            setChanged(false)
+        }
     },[modelReq])
 
 
@@ -125,9 +140,9 @@ function RouterProperties({data}){
             </div>
             <div className={"flex flex-col w-full"}>
                 <span>Название</span>
-                <input value={name} onChange={(e)=>setName(e.currentTarget.value)}/>
+                <input value={name} onChange={(e)=>{setChanged(true);setName(e.currentTarget.value)}}/>
                 <span>Модель</span>
-                <input value={model} onChange={(e)=>setModel(e.currentTarget.value)}/>
+                <input value={model} onChange={(e)=>{setChanged(true);setModel(e.currentTarget.value)}}/>
             </div>
         </div>
 
@@ -152,6 +167,7 @@ function Project(){
 
     const debounceName = useDebounce(name,500)
     const debounceAddress = useDebounce(address,500)
+
 
     useEffect(()=>{
         setNameState(projectState.name)
@@ -188,11 +204,15 @@ function Project(){
 
                         }).catch(x=>setError(true))
                 }
+                else {
+                    setFloorLoaded(true)
+                }
         }
     },[projectLoaded,floor])
 
     useEffect(()=>{
         if(projectLoaded && saveRequest.saved === false){
+            console.log("saving")
             axios.post(`${apiHost}/project/${pid}/save`,projectState.changed).then(x=>{
                 if(x.status === 201){
                     dispatch(setSaved(true))
@@ -207,10 +227,12 @@ function Project(){
     },[saveRequest])
 
     useEffect(()=>{
-        dispatch(setName(debounceName))
+        if(debounceName!==projectState.name)
+            dispatch(setName(debounceName))
     },[debounceName])
     useEffect(()=>{
-        dispatch(setAddress(debounceAddress))
+        if(debounceAddress!==projectState.address)
+            dispatch(setAddress(debounceAddress))
     },[debounceAddress])
 
 
@@ -219,7 +241,6 @@ function Project(){
     }
 
     const handleChange = (e) =>{
-
         if(e.action==="add")
         {
             dispatch(addComponent({floor:+fid,component:e.component}))
@@ -254,19 +275,28 @@ function Project(){
             }
         })
     }
+
+    const componentSelectedFromList = (e)=>{
+        setSelected(currentFloor.components.find(x=>x.id===e))
+    }
+
+
     let selectedRouter
     let selectedCable
+
     if(floorLoaded && currentFloor.components && selected){
 
-    selectedRouter = currentFloor.components.find(x=>x.id===selected.id)
-    selectedCable = currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)
+        selectedRouter = currentFloor.components.find(x=>x.id===selected.id)
+        selectedCable = currentFloor.components.find(x=>x.start===selected.start && x.end===selected.end)
+
     }
+
     return (
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between light-panel-bg gap-2 h-full"}>
             <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
                 <button className={"button"} onClick={()=>navigate("/")}>{"<- К проектам"}</button>
-                <Components components={floors.find(x=>x.floor === floor)} selected={selected}/>
-                {selectedRouter && selectedRouter.type==="router" && <RouterProperties data={selectedRouter}/>}
+                <Components components={floors.find(x=>x.floor === floor)} selected={selected} onSelected={componentSelectedFromList}/>
+                {selectedRouter && selectedRouter.type==="router" &&  <RouterProperties data={selectedRouter}/>}
                 {selectedCable && selectedCable.type==="cable" && <CableProperties data={selectedCable}/>}
 
             </div>
@@ -290,7 +320,7 @@ function Project(){
                     <button className={"button"} onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
                 </div>
                 <div className={"flex flex-col panel-bg  w-full p-5 h-full"}>
-                    {floorLoaded && <Editor data={projectState.floors.find(x=>x.floor===+fid)} onSelection={setSelected} onChange={handleChange}/>}
+                    {floorLoaded && <Editor data={projectState.floors.find(x=>x.floor===+fid)} onSelection={setSelected} onChange={handleChange} selectedExt={selected}/>}
                 </div>
                 <div className={"flex justify-between p-5"}>
                     <button className={"button"} >Отмена</button>

@@ -45,21 +45,25 @@ export const projectEditorSlice = createSlice({
             return state
         },
         setName: (state, action) => {
+            console.log("set name")
             state.saved = false
             state.name = action.payload
             state.changed.push({action:"set",field:"name",value: state.name})
         },
         setDate: (state, action) => {
+            console.log("set date")
             state.saved = false
             state.date = action.payload
             state.changed.push({action:"set",field:"date",value: state.date})
         },
         setAddress: (state, action) => {
+            console.log("set address")
             state.saved = false
             state.address = action.payload
             state.changed.push({action:"set",field:"address",value: state.address})
         },
         setSaved: (state, action) => {
+            console.log("set saved")
             state.saved = action.payload
             if(state.saved === true){
                 state.changed = []

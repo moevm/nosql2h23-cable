@@ -85,6 +85,7 @@ class Editor{
         if(this.areaSelectionCallback){
             this.areaSelectionCallback( this.selectionArray)
         }
+        console.log(this.selectionArray)
 
     }
 
@@ -166,7 +167,7 @@ class Editor{
             this.mousePressed = false
             this.selectionArea = undefined
             if (this.selectedComponent &&
-                (this.startCoord.x!==pos.x || this.startCoord.y!==pos.y) &&
+                (Math.abs(this.startCoord.x-pos.x)>1 || Math.abs(this.startCoord.y-pos.y)>1) &&
                 this.selectedComponent.type !== "cable") {
                 if (this.componentsCallback) {
                     /*this.componentsCallback({
@@ -423,8 +424,11 @@ class Editor{
     }
 
     setSelected(id){
-        this.changeSelection(this.components.find(x=>x.id===id))
-        this.draw()
+
+        if(!this.selectedComponent || id!==this.selectedComponent.id) {
+            this.changeSelection(this.components.find(x => x.id === id))
+            this.draw()
+        }
     }
 
     removeSelected(){
@@ -490,7 +494,7 @@ function Hint({text}){
 
 
 
-export default function ({data,onSelection,onChange}){
+export default function ({data,onSelection,onChange,selectedExt}){
     const {fid}=useParams()
     const canvasRef = useRef(null)
     const planInputRef = useRef(null)
@@ -522,12 +526,14 @@ export default function ({data,onSelection,onChange}){
             editor.loadFloor(data)
         }
 
-
-
-
-
-
     }, []);
+
+    useEffect(()=>{
+        if(editor && selectedExt) {
+            editor.setSelected(selectedExt.id)
+        }
+        setSelected(selectedExt)
+    },[selectedExt])
 
     const toolChangeHandler = (e)=>{
         setTool(e)

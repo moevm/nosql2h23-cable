@@ -16,6 +16,11 @@
 .scroll-hidden::-webkit-scrollbar {
   display: none;
 }
+
+.gray-button{
+  background-color: #F8F8F8;
+}
+
 button{
   background-color: #F8F8F8;
 }
