@@ -186,8 +186,18 @@ export class AppController {
   }
 
   @Post("/project/:id/save")
-  async saveChanges(@Body() changes, @Param('id') id): Promise<any> {
+  async saveChanges(@Body() changes, @Param('id') cid): Promise<any> {
 
+    let id
+
+    if (cid == 'new') {
+      id = Date.now()
+      const response = await this.neo4jService.write(`CREATE (p:Project {id: ${id},address: "",name: "",DateOfChange: datetime("${new Date().toISOString()}")})`)
+    }
+    else
+    {
+      id = +cid
+    }
 
     for(let c of changes){
       if (c.action==="del"){
