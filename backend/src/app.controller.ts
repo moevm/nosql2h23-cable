@@ -297,6 +297,9 @@ export class AppController {
 
         }
       }
+      else if(c.action==="commit"){
+        console.log("commit")
+      }
     }
     return {
       id: id

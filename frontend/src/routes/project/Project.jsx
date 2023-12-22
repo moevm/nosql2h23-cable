@@ -24,10 +24,10 @@ function Components({components,onSelected,selected}){
     const {pid} = useParams()
 
     return (
-        <div className={"flex flex-col panel-bg p-5 w-full gap-2"}>
+        <div style={{height:"60%"}} className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
-            <div className={"flex flex-col justify-start"}>
+            <div className={"flex flex-col justify-start overflow-y-scroll h-full"}>
                 {(components && components.components) ? components.components.filter(x=>x.name).sort((a,b)=>a.name.localeCompare(b.name)).map(x => {
                     return <div>
                         {
@@ -259,13 +259,13 @@ function Project(){
     let floors = [...projectState.floors]
     let currentFloor = floors.find(x=>x.floor===+fid)
 
-    const handleFloorButton = (event)=>{
+    const handleFloorButton = (e)=>{
         setFloorLoaded(false)
-        setFloor(+event.currentTarget.id)
-        navigate(`/projects/${pid}/floor/${event.currentTarget.id}`)
+        setFloor(e)
+        navigate(`/projects/${pid}/floor/${e}`)
     }
     const handleSaveButton = (event)=>{
-        axios.post(`${apiHost}/project/${pid}/save`,projectState.changed).then(x=>{
+        axios.post(`${apiHost}/project/${pid}/save`,[...projectState.changed,{action:"commit",field:null,value:null}]).then(x=>{
             if(x.status === 201){
                 dispatch(setSaved(true))
                 navigate(`/projects/${x.data.id}/floor/${fid}`)
@@ -278,6 +278,14 @@ function Project(){
 
     const componentSelectedFromList = (e)=>{
         setSelected(currentFloor.components.find(x=>x.id===e))
+    }
+
+    const deleteFloorHandle = ()=>{
+        if(confirm("Вы точно хотите удалить этаж?")){
+            handleFloorButton(projectState.floors.length-1)
+            dispatch(removeFloor(projectState.floors.length))
+        }
+
     }
 
 
@@ -325,7 +333,7 @@ function Project(){
                 <div className={"flex justify-between p-5"}>
                     <button className={"button"} >Отмена</button>
                     {pid!=="new" && <button className={"button"}  onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
-                    {pid === "new" && <button className={"button"}  onClick={handleSaveButton}>Сохранить</button>}
+                    {<button className={"button"}  onClick={handleSaveButton}>Создать версию</button>}
                 </div>
             </div>
             <div className={"w-20 flex flex-col justify-center items-center h-full"}>
@@ -344,14 +352,14 @@ function Project(){
                             else {
                                 return <button className={"floor-button"}
                                                id={(x.floor).toString()}
-                                               onClick={handleFloorButton}>{x.floor}</button>
+                                               onClick={x=>handleFloorButton(+x.currentTarget.id)}>{x.floor}</button>
                             }
                         }
                     )
                     }
                 </div>
                 <button className={"floor-button"}
-                        onClick={(e)=>dispatch(removeFloor(projectState.floors.length))}>-</button>
+                        onClick={deleteFloorHandle}>-</button>
             </div>
         </div>
     )

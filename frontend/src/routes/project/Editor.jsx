@@ -4,6 +4,7 @@ import cableSvg from "../../assets/cable.svg";
 import deleteSvg from "../../assets/delete.svg";
 import planSvg from "../../assets/plan.svg";
 import cursorSvg from "../../assets/cursor.svg";
+import floorSvg from "../../assets/2.svg";
 import {useParams} from "react-router-dom";
 let editor
 
@@ -79,13 +80,13 @@ class Editor{
         }
         this.selectedComponent = component
         if(this.selectionCallback){
-            console.log(component)
+            //console.log(component)
             this.selectionCallback(component)
         }
         if(this.areaSelectionCallback){
             this.areaSelectionCallback( this.selectionArray)
         }
-        console.log(this.selectionArray)
+       // console.log(this.selectionArray)
 
     }
 
@@ -142,7 +143,7 @@ class Editor{
         }
         else if (this.tool===2)
         {
-            console.log('cable')
+            //console.log('cable')
             let c = this.getElementNearPos(pos, 15)
             if(c && this.cableStarted !== undefined && c !== this.cableStarted)
             {
@@ -175,7 +176,7 @@ class Editor{
                             return {...x, pos: {x: x.pos.x, y: x.pos.y}}
                         }), cables: this.cables
                     }) */
-                    console.log("called")
+                   // console.log("called")
                     this.componentsCallback({action: "set", component: {...this.selectedComponent}})
                 }
             }
@@ -260,7 +261,7 @@ class Editor{
         if(this.componentsCallback){
             //this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
             this.componentsCallback({action:"add",component:{...r}})
-            console.log(this.components)
+           // console.log(this.components)
         }
 
         this.draw()
@@ -485,9 +486,9 @@ class Editor{
 
 function Hint({text}){
     return (
-            <div className={"panel-bg absolute px-2 py-1 hint"}>
+            <span className={"panel-bg absolute px-2 py-1 hint whitespace-nowrap"}>
                 {text}
-            </div>
+            </span>
     )
 }
 
@@ -512,6 +513,9 @@ export default function ({data,onSelection,onChange,selectedExt}){
         else{
 
         }
+
+        editor.setPlan(floorSvg);
+
         editor.selectionCallback = (e)=>{
             setSelected(e)
             onSelection(e)
@@ -574,11 +578,11 @@ export default function ({data,onSelection,onChange,selectedExt}){
                     <img src={deleteSvg} alt={"Удалить"}/>
                     <Hint text={"Удалить"}/>
                 </button>}
-                <button onClick={(e)=>planInputRef.current.click()}
+                <button /*onClick={(e)=>planInputRef.current.click()}*/
                     className={"editor-button flex justify-center items-center hint-button"}>
                     <img className={"w-3/4"} src={planSvg} alt={"План"}/>
                     <input ref={planInputRef} onChange={fileChangeHandler} className={"hidden"} type={"file"}/>
-                    <Hint text={"План"}/>
+                    <Hint text={"План (Пока не доступно)"}/>
                 </button>
             </div>
 

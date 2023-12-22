@@ -104,10 +104,12 @@ function Projects() {
             setDeleteMode(true)
         }
         else {
-            axios.post(`${apiHost}/projects/delete`,{projects: selected}).then(
-                x =>
-                    axios.get(`${apiHost}/projects`).then(y=> setData(y.data))
-            )
+            if(confirm(`Вы точно хотить удалить ${selected.length} проектов?`)){
+                axios.post(`${apiHost}/projects/delete`, {projects: selected}).then(
+                    x =>
+                        axios.get(`${apiHost}/projects`).then(y => setData(y.data))
+                )
+            }
         }
     }
     let cancelHandler = ()=>{

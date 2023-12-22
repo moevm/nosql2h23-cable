@@ -3,6 +3,7 @@
   padding: 0;
   text-align: center;
   height: 100vh;
+  overflow-y: hidden;
 }
 
 .panel-bg{
