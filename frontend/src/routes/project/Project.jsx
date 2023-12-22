@@ -19,17 +19,18 @@ import Editor from "./Editor.jsx";
 import routerSvg from "../../assets/router.svg"
 import useDebounce from "../../Debounce.jsx";
 
-function Components({components}){
+function Components({components,onSelected,selected}){
     const navigate = useNavigate()
     const {pid} = useParams()
+    console.log(selected)
     return (
         <div className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
            <input className={"w-full"} placeholder={"Поиск"}/>
-            <div>
-                {(components && components.components) ? components.components.map(x => {
+            <div className={"flex flex-col justify-start items-start"}>
+                {(components && components.components) ? components.components.filter(x=>x.name).sort((a,b)=>a.name.localeCompare(b.name)).map(x => {
                     return <div>
-                        <span>{x.name}</span>
+                        <button className={"light-button"} style={{backgroundColor:(selected &&  x.id===selected.id)?"blue":"#D9D9D9"}} onClick={()=>onClick(x.id)}>{x.name}</button>
                     </div>
                 }) : ""}
             </div>
@@ -266,7 +267,7 @@ function Project(){
         <div style={{maxHeight:"100vh"}} className={"flex w-full justify-between light-panel-bg gap-2 h-full"}>
             <div style={{flex:"25%"}} className={"flex flex-col gap-5 justify-start h-full w-1/4"}>
                 <button className={"button"} onClick={()=>navigate("/")}>{"<- К проектам"}</button>
-                <Components components={floors.find(x=>x.floor === floor)}/>
+                <Components components={floors.find(x=>x.floor === floor)} selected={selected}/>
                 {selectedRouter && selectedRouter.type==="router" && <RouterProperties data={selectedRouter}/>}
                 {selectedCable && selectedCable.type==="cable" && <CableProperties data={selectedCable}/>}
 

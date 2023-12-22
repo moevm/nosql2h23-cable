@@ -422,6 +422,11 @@ class Editor{
         this.tool = tool
     }
 
+    setSelected(id){
+        this.changeSelection(this.components.find(x=>x.id===id))
+        this.draw()
+    }
+
     removeSelected(){
         this.components=this.components.filter(x => !this.selectionArray.includes(x))
         this.cables=this.cables.filter(x => !this.selectionArray.find(y=> y.id===x.start ||  y.id===x.end || x===y))
@@ -469,6 +474,7 @@ class Editor{
         let copy = components.map(x=>{return {...x}})
         this.cables = copy.filter(x=>x.type === "cable")
         this.components = copy.filter(x=>x.type !== "cable")
+        this.draw()
     }
 
 }
