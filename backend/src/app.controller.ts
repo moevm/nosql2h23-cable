@@ -167,7 +167,7 @@ export class AppController {
       id:props.id.toNumber(),
       x:undefined,
       y:undefined,
-      pos: {x:props.x.toNumber(),y:props.y.toNumber()},
+      pos: {x:Number(props.x),y:Number(props.y)},
       type: x.get('c').labels[0].toLowerCase()}})
 
     const cables = response2.records.map(x=>
