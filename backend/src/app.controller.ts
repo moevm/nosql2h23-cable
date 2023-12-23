@@ -593,10 +593,9 @@ export class AppController {
       let props = x.get('p2').properties
       return {
         date: props.DateOfChange.toStandardDate(),
-        id: props.id
+        id: props.id.toNumber()
       }
     })
-
     return {
       history: history
     }
