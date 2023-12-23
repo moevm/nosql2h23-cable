@@ -11,7 +11,7 @@ export default function (){
 
     useEffect(()=>{
         axios.get(`${apiHost}/project/${pid}/history`).then(x=>{
-            setVersions(x.data)
+            setVersions(x.data.history)
         })
     },[])
 
@@ -22,7 +22,7 @@ export default function (){
                     <button onClick={()=>navigate(`/projects/${pid}`)}>Назад</button>
                 </div>
                 <div className={"flex flex-col justify-start overflow-y-scroll"}>
-                    {versions.map(x=>{
+                    {versions.sort((a,b)=>Date.parse(b.date)-Date.parse(a.date)).map(x=>{
                         return <div className={"bg-gray-400 flex justify-between"}>
                             <span>{new Date(x.date).toLocaleString()}</span>
                             <Link to={`/projects/${x.id}`}>
