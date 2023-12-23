@@ -94,7 +94,7 @@ export class AppController {
 
     if (queryList.length > 0)
     {
-      whereStr += "where "
+      whereStr += " and "
       for (let i = 0; i < queryList.length - 1; i++)
       {
         whereStr += queryList[i] + " and "
@@ -105,6 +105,7 @@ export class AppController {
     const response = await this.neo4jService.read(`
     OPTIONAL MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
     OPTIONAL MATCH (n)<-[k:COMMENT]-(b:Comment) with n, countFloor, count(b) as countComment 
+    where not (n)<-[:HISTORY]-()
     ${whereStr}
     RETURN n, countFloor, countComment
     `)
@@ -196,8 +197,145 @@ export class AppController {
     else
     {
       id = +cid
-    }
 
+      // Сохранение истории
+    {
+      const response = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})
+         return p`)
+
+      const response1 = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})-[r:FLOOR]-(f:Floor)-[:ROUTER]-(c)
+         return c, f`)
+
+      const response2 = await this.neo4jService.read(
+          `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)-[:CABLE]-(c)
+          optional match (r1:Router)-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router)
+          where r1.id < r2.id
+          return f,c,r1,r2`)
+
+      const response3 = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})-[:COMMENT]-(c:Comment)
+        return c`)
+
+      const response4 = await this.neo4jService.read(
+        `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)
+          return f`)
+
+
+      const projectNode = response.records.map(x=>{
+          let props = x.get('p').properties
+          return {
+            ...props,
+            id: props.id.toNumber(),
+            DateOfChange: props.DateOfChange.toStandardDate()
+          }
+        })
+      
+      const floors = response4.records.map(x=>{
+        let props = x.get('f').properties
+        return {
+          ...props,
+          number: props.number.toNumber()
+        }
+      })
+
+      const routers = response1.records.map(x=>
+      {
+        let props = x.get('c').properties
+        let floor = x.get('f').properties.number.toNumber()
+
+        return {
+          floor: floor,
+          router: {...props, id: props.id.toNumber()}
+        }
+      })
+  
+      const cables = response2.records.map(x=>
+      {
+        let props = x.get('c').properties
+        let floor = x.get('f').properties.number.toNumber()
+
+        return {
+          floor: floor,
+          cable: {
+            ...props,
+            len: props.len.toNumber(),
+            start: x.get('r1').properties.id.toNumber(),
+            end: x.get('r2').properties.id.toNumber()
+          }
+          }})
+
+      const comments = response3.records.map(x => {
+        let props = x.get('c').properties
+        return {
+          ...props,
+          comment_id: props.comment_id.toNumber(),
+          comment_date: props.comment_date
+        }
+      })
+
+      let project = {
+        id: Date.now(),
+        name: projectNode[0].name,
+        address: projectNode[0].address,
+        date: new Date().toISOString(),
+        comments: comments,
+        floors: floors,
+        routers: routers,
+        cables: cables
+      }
+
+      
+
+      let floorList:string = ``
+      project.floors.map(x=>{
+        floorList += `create (p) <-[:FLOOR]-(f${x.number}:Floor {number: ${x.number}, plan: "${x.plan}"})\n`
+      })
+
+      let commentList:string = ``
+      project.comments.map(x=>{
+        commentList += `create (p) <-[:COMMENT]-(c${x.comment_id}:Comment {comment_date: datetime("${x.comment_date}"), comment_id: ${x.comment_id}, comment_text: "${x.comment_text}"})\n`
+      })
+
+      await this.neo4jService.write(`
+      match (p2:Project {id: ${id}})
+      set p2.DateOfChange = datetime("${project.date}")
+      create (p:Project {id: ${project.id}, name: "${project.name}", address: "${project.address}", DateOfChange: datetime("${projectNode[0].DateOfChange.toISOString()}")})<-[:HISTORY]-(p2)
+      ${floorList}
+      ${commentList}
+      `)
+
+
+      project.routers.map(async x=>{
+        let floorId = x.floor
+        let r = x.router
+        await this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
+          CREATE (f) <-[:ROUTER]- (r:Router {id: ${r.id},
+           x:${r.x},
+           y:${r.y},
+           name:"${r.name}",
+           model:"${r.model}"
+           })
+        `)
+      })
+
+      project.cables.map(async x=>{
+        let floorId = x.floor
+        let c = x.cable
+        await this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
+          MATCH (f)-[:ROUTER]-(r1:Router {id:${c.start}})
+          MATCH (f)-[:ROUTER]-(r2:Router {id:${c.end}})
+          CREATE (f) <-[:CABLE]- (r:Cable {
+           len: ${c.len},
+           model: "${c.model}"
+           })
+           CREATE (r1)-[:CONNECTED]->(r)
+           CREATE (r2)-[:CONNECTED]->(r)
+        `)
+      })
+    }
+    }
     for(let c of changes){
       if (c.action==="del"){
         //удалить этаж
@@ -297,143 +435,6 @@ export class AppController {
         }
       }
 
-      // Сохранение истории
-      {
-
-        const response = await this.neo4jService.read(
-          `match (p:Project {id: ${id}})
-           return p`)
-
-        const response1 = await this.neo4jService.read(
-          `match (p:Project {id: ${id}})-[r:FLOOR]-(f:Floor)-[:ROUTER]-(c)
-           return c, f`)
-  
-        const response2 = await this.neo4jService.read(
-            `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)-[:CABLE]-(c)
-            optional match (r1:Router)-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router)
-            where r1.id < r2.id
-            return f,c,r1,r2`)
-
-        const response3 = await this.neo4jService.read(
-          `match (p:Project {id: ${id}})-[:COMMENT]-(c:Comment)
-          return c`)
-
-        const response4 = await this.neo4jService.read(
-          `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)
-            return f`)
-  
-
-        const projectNode = response.records.map(x=>{
-            let props = x.get('p').properties
-            return {
-              ...props,
-              id: props.id.toNumber(),
-              DateOfChange: props.DateOfChange.toStandardDate()
-            }
-          })
-        
-        const floors = response4.records.map(x=>{
-          let props = x.get('f').properties
-          return {
-            ...props,
-            number: props.number.toNumber()
-          }
-        })
-
-        const routers = response1.records.map(x=>
-        {
-          let props = x.get('c').properties
-          let floor = x.get('f').properties.number.toNumber()
-
-          return {
-            floor: floor,
-            router: {...props, id: props.id.toNumber()}
-          }
-        })
-    
-        const cables = response2.records.map(x=>
-        {
-          let props = x.get('c').properties
-          let floor = x.get('f').properties.number.toNumber()
-
-          return {
-            floor: floor,
-            cable: {
-              ...props,
-              len: props.len.toNumber(),
-              start: x.get('r1').properties.id.toNumber(),
-              end: x.get('r2').properties.id.toNumber()
-            }
-            }})
-
-        const comments = response3.records.map(x => {
-          let props = x.get('c').properties
-          return {
-            ...props,
-            comment_id: props.comment_id.toNumber(),
-            comment_date: props.comment_date
-          }
-        })
-
-        let project = {
-          id: Date.now(),
-          name: projectNode[0].name,
-          address: projectNode[0].address,
-          date: new Date().toISOString(),
-          comments: comments,
-          floors: floors,
-          routers: routers,
-          cables: cables
-        }
-
-        
-
-        let floorList:string = ``
-        project.floors.map(x=>{
-          floorList += `create (p) <-[:FLOOR]-(f${x.number}:Floor {number: ${x.number}, plan: "${x.plan}"})\n`
-        })
-
-        let commentList:string = ``
-        project.comments.map(x=>{
-          commentList += `create (p) <-[:COMMENT]-(c${x.comment_id}:Comment {comment_date: datetime("${x.comment_date}"), comment_id: ${x.comment_id}, comment_text: "${x.comment_text}"})\n`
-        })
-
-        await this.neo4jService.write(`
-        match (p2:Project {id: ${id}})
-        create (p:Project {id: ${project.id}, name: "${project.name}", address: "${project.address}", DateOfChange: datetime("${project.date}")})<-[:HISTORY]-(p2)
-        ${floorList}
-        ${commentList}
-        `)
-
-
-        project.routers.map(async x=>{
-          let floorId = x.floor
-          let r = x.router
-          await this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
-            CREATE (f) <-[:ROUTER]- (r:Router {id: ${r.id},
-             x:${r.x},
-             y:${r.y},
-             name:"${r.name}",
-             model:"${r.model}"
-             })
-          `)
-        })
-
-        project.cables.map(async x=>{
-          let floorId = x.floor
-          let c = x.cable
-          await this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
-            MATCH (f)-[:ROUTER]-(r1:Router {id:${c.start}})
-            MATCH (f)-[:ROUTER]-(r2:Router {id:${c.end}})
-            CREATE (f) <-[:CABLE]- (r:Cable {
-             len: ${c.len},
-             model: "${c.model}"
-             })
-             CREATE (r1)-[:CONNECTED]->(r)
-             CREATE (r2)-[:CONNECTED]->(r)
-          `)
-        })
-      }
     }
     return {
       id: id
