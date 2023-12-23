@@ -76,6 +76,9 @@ export const projectEditorSlice = createSlice({
 
         },
         changeComponent: (state, action) => {
+
+            console.log(action)
+
             state.saved = false
             let floor = state.floors.find(x=>x.floor === action.payload.floor)
             state.changed.push({action:"set",field:"component",value:
@@ -105,6 +108,9 @@ export const projectEditorSlice = createSlice({
 
         },
         removeComponents: (state, action) => {
+
+
+
             state.saved = false
 
             // this.components=this.components.filter(x => !this.selectionArray.includes(x))

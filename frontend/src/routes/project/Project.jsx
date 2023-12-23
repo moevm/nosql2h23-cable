@@ -22,25 +22,31 @@ import useDebounce from "../../Debounce.jsx";
 function Components({components,onSelected,selected}){
     const navigate = useNavigate()
     const {pid} = useParams()
-
+    const [searchText,setSearchText]=useState("")
     return (
         <div style={{height:"60%"}} className={"flex flex-col panel-bg p-5 w-full gap-2"}>
             <span>Список компонентов</span>
-           <input className={"w-full"} placeholder={"Поиск"}/>
-            <div className={"flex flex-col justify-start overflow-y-scroll h-full"}>
-                {(components && components.components) ? components.components.filter(x=>x.name).sort((a,b)=>a.name.localeCompare(b.name)).map(x => {
+           <input value={searchText} className={"w-full"} onChange={(e)=>setSearchText(e.currentTarget.value)} placeholder={"Поиск"}/>
+            <div className={"flex flex-col justify-start overflow-y-scroll h-full text-xs w-full"}>
+                {(components && components.components) ? components
+                    .components
+                    .map(x =>
+                        x.name?x:{...x, name:`Кабель: ${components.components.find(y=>y.id===x.start).name}-${components.components.find(y=>y.id===x.end).name}`})
+                    .filter(x=>x.name.toLocaleLowerCase().includes(searchText.toLocaleLowerCase()))
+                    .sort((a,b)=>a.name
+                        .localeCompare(b.name)).map(x => {
                     return <div>
                         {
-                            (selected &&  x.id===selected.id)?
+                            (selected &&  x===selected)?
 
-                                <button className={"gray-button w-full p-2"} onClick={()=>onSelected(x.id)}>{x.name}</button>:
-                                <button className={"light-button w-full p-2"} onClick={()=>onSelected(x.id)}>{x.name}</button>
+                                <button className={"gray-button w-full p-2"} onClick={()=>onSelected(x)}>{x.name}</button>:
+                                <button className={"light-button w-full p-2"} onClick={()=>onSelected(x)}>{x.name}</button>
 
                             }
                     </div>
                 }) : ""}
             </div>
-            <button className={"button light-button"} onClick={() => navigate(`/projects/${pid}/statistics`)}>Статистика</button>
+            <button className={"button light-button"} /*onClick={() => navigate(`/projects/${pid}/statistics`)}*/>Статистика (Пока не доступно)</button>
 
         </div>
     )
@@ -69,21 +75,27 @@ export async function newProjectLoader({params}){
 function CableProperties({data}){
     const dispatch = useDispatch()
     const { fid } = useParams();
-    const [len,setLen]=useState(0)
+    const [len,setLen]=useState(data.len)
     const lenReq = useDebounce(len,500)
-    const [model,setModel]=useState("default")
+    const [model,setModel]=useState(data.model)
     const modelReq = useDebounce(model,500)
+    const [changed,setChanged]=useState(false)
 
     useEffect(()=>{
         setModel(data.model)
         setLen((data.len))
-    },[])
+    },[data])
+
 
     useEffect(()=>{
-        dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", len: lenReq}}))
+        if(changed) {
+            dispatch(changeComponent({floor: +fid, component: {...data, type: "cable", len: lenReq}}))
+        }
     },[lenReq])
     useEffect(()=>{
-        dispatch(changeComponent({floor:+fid,component:{...data,type:"cable", model: modelReq}}))
+        if(changed) {
+            dispatch(changeComponent({floor: +fid, component: {...data, type: "cable", model: modelReq}}))
+        }
     },[modelReq])
 
 
@@ -106,17 +118,16 @@ function RouterProperties({data}){
     const dispatch = useDispatch()
     const { fid } = useParams();
 
-    const [name,setName]=useState("")
+    const [name,setName]=useState(data.name)
     const nameReq = useDebounce(name,500)
-    const [model,setModel]=useState("default")
+    const [model,setModel]=useState(data.model)
     const modelReq = useDebounce(model,500)
     const [changed,setChanged]=useState(false)
-
 
     useEffect(()=>{
         setName(data.name)
         setModel((data.model))
-    },[])
+    },[data])
 
     useEffect(()=>{
         if(changed) {
@@ -160,14 +171,16 @@ function Project(){
     const [selected,setSelected] = useState()
     const [error,setError] = useState(false)
     let projectState = useSelector(state => state.projectEditorState)
-    const saveRequest = useDebounce(projectState,2000)
+    //const saveRequest = useDebounce(projectState,2000)
 
     const [name,setNameState] =useState("")
     const [address,setAddressState] =useState("")
 
+    const [userChangedName,setUserChangedName] = useState(false)
+    const [userChangedAddress,setUserChangedAddress] = useState(false)
+
     const debounceName = useDebounce(name,500)
     const debounceAddress = useDebounce(address,500)
-
 
     useEffect(()=>{
         setNameState(projectState.name)
@@ -209,7 +222,7 @@ function Project(){
                 }
         }
     },[projectLoaded,floor])
-
+/*
     useEffect(()=>{
         if(projectLoaded && saveRequest.saved === false){
             console.log("saving")
@@ -225,14 +238,19 @@ function Project(){
         }
 
     },[saveRequest])
-
+*/
     useEffect(()=>{
-        if(debounceName!==projectState.name)
+        console.log("here")
+        if(userChangedName) {
+            setUserChangedName(false)
             dispatch(setName(debounceName))
+        }
     },[debounceName])
     useEffect(()=>{
-        if(debounceAddress!==projectState.address)
+        if(userChangedAddress) {
+            setUserChangedAddress(false)
             dispatch(setAddress(debounceAddress))
+        }
     },[debounceAddress])
 
 
@@ -260,12 +278,13 @@ function Project(){
     let currentFloor = floors.find(x=>x.floor===+fid)
 
     const handleFloorButton = (e)=>{
+        setSelected(undefined)
         setFloorLoaded(false)
         setFloor(e)
         navigate(`/projects/${pid}/floor/${e}`)
     }
     const handleSaveButton = (event)=>{
-        axios.post(`${apiHost}/project/${pid}/save`,[...projectState.changed,{action:"commit",field:null,value:null}]).then(x=>{
+        axios.post(`${apiHost}/project/${pid}/save`,projectState.changed).then(x=>{
             if(x.status === 201){
                 dispatch(setSaved(true))
                 navigate(`/projects/${x.data.id}/floor/${fid}`)
@@ -277,7 +296,7 @@ function Project(){
     }
 
     const componentSelectedFromList = (e)=>{
-        setSelected(currentFloor.components.find(x=>x.id===e))
+        setSelected(e)
     }
 
     const deleteFloorHandle = ()=>{
@@ -313,16 +332,17 @@ function Project(){
                     <div  className={"flex flex-col"}>
                         <input type={"text"} className={"text-2xl light-panel-bg"}
                                value={name}
-                               onChange={(e)=>{setNameState(e.currentTarget.value)}}
+                               onChange={(e)=>{setUserChangedName(true); setNameState(e.currentTarget.value)}}
                         />
                         <input type={"text"} className={"light-panel-bg"}
                                value={address}
-                               onChange={(e)=>{setAddressState(e.currentTarget.value)}}
+                               onChange={(e)=>{setUserChangedAddress(true); setAddressState(e.currentTarget.value)}}
                         />
                     </div>
                     <div  className={"flex flex-col"}>
                         <span>{projectState.date?new Date(projectState.date).toLocaleString():""}</span>
-                        {pid!=="new"?( projectState.saved?"Изменения сохранены":"Сохранение..."):"Проект не сохранен"}
+                        {/*pid!=="new"?( projectState.saved?"Изменения сохранены":"Сохранение..."):"Проект не сохранен"*/}
+                        {projectState.saved?"Изменения сохранены":"Проект не сохранен"}
                     </div>
 
                     <button className={"button"} onClick={()=>navigate(`/projects/${pid}/history`)}>История изменений</button>
@@ -333,7 +353,7 @@ function Project(){
                 <div className={"flex justify-between p-5"}>
                     <button className={"button"} >Отмена</button>
                     {pid!=="new" && <button className={"button"}  onClick={()=>navigate(`/projects/${pid}/comments`)}>Комментарии</button>}
-                    {<button className={"button"}  onClick={handleSaveButton}>Создать версию</button>}
+                    {<button className={"button"}  onClick={handleSaveButton}>Сохранить</button>}
                 </div>
             </div>
             <div className={"w-20 flex flex-col justify-center items-center h-full"}>
