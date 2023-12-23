@@ -271,7 +271,7 @@ export class AppController {
         return {
           ...props,
           comment_id: props.comment_id.toNumber(),
-          comment_date: props.comment_date
+          comment_date: props.comment_date.toStandardDate()
         }
       })
 
@@ -492,40 +492,90 @@ export class AppController {
     let exportsJson = []
     exportsJson = await Promise.all(
       exportList.map(async id => {
-        const res = await this.neo4jService.read(`
-          match (p:Project {id: ${id}})
-          optional match (p)-[r]-(t)
-          return p, t
-        `)
-        let properties = res.records[0].get('p').properties
-        let commentList = []
-        let floorList = []
-        res.records.map(x => {
-          let elem = x.get('t')
-
-          if (elem.labels[0] == 'Floor')
-          {
-            floorList.push({
-              number: elem.properties.number.toNumber(),
-              plan: elem.properties.plan
-            })
-          }
-          else if (elem.labels[0] == 'Comment')
-          {
-            commentList.push({
-              comment_id: elem.properties.comment_id.toNumber(),
-              comment_text: elem.properties.comment_text,
-              comment_date: elem.properties.comment_date.toStandardDate()
-            })
+        const response = await this.neo4jService.read(
+          `match (p:Project {id: ${id}})
+           return p`)
+  
+        const response1 = await this.neo4jService.read(
+          `match (p:Project {id: ${id}})-[r:FLOOR]-(f:Floor)-[:ROUTER]-(c)
+           return c, f`)
+  
+        const response2 = await this.neo4jService.read(
+            `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)-[:CABLE]-(c)
+            optional match (r1:Router)-[:CONNECTED]-(c)-[:CONNECTED]-(r2:Router)
+            where r1.id < r2.id
+            return f,c,r1,r2`)
+  
+        const response3 = await this.neo4jService.read(
+          `match (p:Project {id: ${id}})-[:COMMENT]-(c:Comment)
+          return c`)
+  
+        const response4 = await this.neo4jService.read(
+          `match (p:Project {id: ${id}})-[:FLOOR]-(f:Floor)
+            return f`)
+  
+  
+        const projectNode = response.records.map(x=>{
+            let props = x.get('p').properties
+            return {
+              ...props,
+              id: props.id.toNumber(),
+              DateOfChange: props.DateOfChange.toStandardDate()
+            }
+          })
+        
+        const floors = response4.records.map(x=>{
+          let props = x.get('f').properties
+          return {
+            ...props,
+            number: props.number.toNumber()
           }
         })
+  
+        const routers = response1.records.map(x=>
+        {
+          let props = x.get('c').properties
+          let floor = x.get('f').properties.number.toNumber()
+  
+          return {
+            floor: floor,
+            router: {...props, id: props.id.toNumber()}
+          }
+        })
+    
+        const cables = response2.records.map(x=>
+        {
+          let props = x.get('c').properties
+          let floor = x.get('f').properties.number.toNumber()
+  
+          return {
+            floor: floor,
+            cable: {
+              ...props,
+              len: props.len.toNumber(),
+              start: x.get('r1').properties.id.toNumber(),
+              end: x.get('r2').properties.id.toNumber()
+            }
+            }})
+  
+        const comments = response3.records.map(x => {
+          let props = x.get('c').properties
+          return {
+            ...props,
+            comment_id: props.comment_id.toNumber(),
+            comment_date: props.comment_date.toStandardDate()
+          }
+        })
+  
         return {
-          id: properties.id.toNumber(),
-          name: properties.name,
-          address: properties.address,
-          date: properties.DateOfChange.toStandardDate(),
-          comments: commentList,
-          floors: floorList
+          id: projectNode[0].id,
+          name: projectNode[0].name,
+          address: projectNode[0].address,
+          date: new Date().toISOString(),
+          comments: comments,
+          floors: floors,
+          routers: routers,
+          cables: cables
         }
       })
       )
