@@ -566,9 +566,16 @@ export class AppController {
       await Promise.all(
         deleteList.map(id => {
           return this.neo4jService.write(
-            `match (p:Project {id: ${id}})
-          optional match (p)-[r]-(t)
-          delete r,p,t`)
+            `match (p:Project {id: ${id}})-[:HISTORY*]-(dp:Project)
+            call {
+                with dp
+                optional match (dp)-[:FLOOR|COMMENT]-(t)
+                optional match (t)-[]-(c)
+                detach delete  c, t, dp
+            }
+            optional match (p)-[:FLOOR|COMMENT]-(t)
+            optional match (t)-[]-(c)
+            detach delete  c, t, p`)
       }))
       return response.status(201).json({})
     }
