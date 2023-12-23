@@ -296,7 +296,9 @@ export class AppController {
 
         }
       }
-      else if(c.action==="commit"){
+
+      // Сохранение истории
+      {
 
         const response = await this.neo4jService.read(
           `match (p:Project {id: ${id}})
