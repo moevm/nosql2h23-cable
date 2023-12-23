@@ -83,7 +83,7 @@ export default function (){
                     <div className={"overflow-y-scroll"}>
                         <div className={"flex flex-col gap-5 justify-start h-full"}>
                             {
-                            comments && comments.comments.map(x => <Comment data={x} />)
+                            comments && comments.comments.sort((a,b)=>Date.parse(a.date) - Date.parse(b.date)).map(x => <Comment data={x} />)
                             }
                     </div>
 

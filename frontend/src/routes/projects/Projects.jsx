@@ -104,10 +104,12 @@ function Projects() {
             setDeleteMode(true)
         }
         else {
-            axios.post(`${apiHost}/projects/delete`,{projects: selected}).then(
-                x =>
-                    axios.get(`${apiHost}/projects`).then(y=> setData(y.data))
-            )
+            if(confirm(`Вы точно хотить удалить ${selected.length} проектов?`)){
+                axios.post(`${apiHost}/projects/delete`, {projects: selected}).then(
+                    x =>
+                        axios.get(`${apiHost}/projects`).then(y => setData(y.data))
+                )
+            }
         }
     }
     let cancelHandler = ()=>{
@@ -146,11 +148,11 @@ function Projects() {
                 </div>
 
             </div>
-            <div className={"flex justify-between w-full"}>
-                <div  className={"flex flex-col justify-between w-full"}>
+            <div style={{height:"calc(100% - 90px)"}} className={"flex justify-between w-full"}>
+                <div  className={"flex flex-col justify-between w-full h-full"}>
 
-                    <div className={"flex justify-between w-full"}>
-                        <div className={"w-full"}>
+                    <div className={"flex justify-between w-full h-full"}>
+                        <div className={"w-full h-full"}>
                             {checkboxesVisible && <div className={"flex w-full justify-end"}>
                                 <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
                                 <span>Выбрать все</span>
@@ -164,9 +166,11 @@ function Projects() {
                                 <span style={{flex: "20%"}}>Кол-во комментариев</span>
                                 <div style={{flex: "5%"}}/>
                             </div>
+                            <div className={"overflow-y-scroll h-full"}>
                             {data && data.projects.map((x,i)=>
                                 <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
                             )}
+                            </div>
                         </div>
 
                     </div>
@@ -174,7 +178,7 @@ function Projects() {
                 <div  className={"flex flex-col justify-start p-2 w-1/12"}>
                     {!exportMode && !deleteMode && <>
                         <button className={"button"} onClick={(e)=>navigate("/projects/new")}>+</button>
-                        <button className={"button"}onClick={(e)=>navigate("/import")}>Импорт</button>
+                        <button className={"button"} onClick={(e)=>navigate("/import")}>Импорт</button>
                     </>
                     }
                     {!deleteMode && <button className={"button"} onClick={exportHandler}>Экспорт</button>}

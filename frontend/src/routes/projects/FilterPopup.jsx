@@ -49,7 +49,7 @@ export default function ({open,leaveHandler,query,setQuery}){
         let d = new Date(date)
 
         return `${d.getFullYear()}-${
-            d.getMonth().toLocaleString('en-US',{minimumIntegerDigits:2})}-${
+            (d.getMonth()+1).toLocaleString('en-US',{minimumIntegerDigits:2})}-${
             d.getDate().toLocaleString('en-US',{minimumIntegerDigits:2})}T${
             d.getHours().toLocaleString('en-US',{minimumIntegerDigits:2})}:${
             d.getMinutes().toLocaleString('en-US',{minimumIntegerDigits:2})}`
