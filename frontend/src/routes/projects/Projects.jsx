@@ -148,11 +148,11 @@ function Projects() {
                 </div>
 
             </div>
-            <div className={"flex justify-between w-full"}>
-                <div  className={"flex flex-col justify-between w-full"}>
+            <div style={{height:"calc(100% - 90px)"}} className={"flex justify-between w-full"}>
+                <div  className={"flex flex-col justify-between w-full h-full"}>
 
-                    <div className={"flex justify-between w-full"}>
-                        <div className={"w-full"}>
+                    <div className={"flex justify-between w-full h-full"}>
+                        <div className={"w-full h-full"}>
                             {checkboxesVisible && <div className={"flex w-full justify-end"}>
                                 <input checked={selectAll} type={"checkbox"} onClick={ (e)=>selectAllHandler(e.currentTarget.checked)}/>
                                 <span>Выбрать все</span>
@@ -166,7 +166,7 @@ function Projects() {
                                 <span style={{flex: "20%"}}>Кол-во комментариев</span>
                                 <div style={{flex: "5%"}}/>
                             </div>
-                            <div className={"overflow-y-scroll"}>
+                            <div className={"overflow-y-scroll h-full"}>
                             {data && data.projects.map((x,i)=>
                                 <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
                             )}
