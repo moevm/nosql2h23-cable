@@ -589,20 +589,61 @@ export class AppController {
     try {
       let data = JSON.parse(file.buffer.toString())
       await Promise.all(
-        data.projects.map(async p => {
-              await this.neo4jService.write(`CREATE (p:Project {id: ${p.id},address: "${p.address}",name: "${p.name}",DateOfChange: datetime("${p.date}")})`)
-            const floors = p.floors
-
-            return Promise.all(floors.map(f => {
-              return this.neo4jService.write(`MATCH(p:Project {id: ${p.id}}) 
-            CREATE (p) <-[:FLOOR]- (f:Floor {number: ${f.number}, plan: "${f.plan}"})
-            RETURN f`)
-            }))
+        data.projects.map(async project => {
+          
+          let floorList:string = ``
+          project.floors.map(x=>{
+            floorList += `create (p) <-[:FLOOR]-(f${x.number}:Floor {number: ${x.number}, plan: "${x.plan}"})\n`
+          })
+    
+          let commentList:string = ``
+          project.comments.map(x=>{
+            commentList += `create (p) <-[:COMMENT]-(c${x.comment_id}:Comment {comment_date: datetime("${x.comment_date}"), comment_id: ${x.comment_id}, comment_text: "${x.comment_text}"})\n`
+          })
+          
+          
+          await this.neo4jService.write(`
+          create (p:Project {id: ${project.id}, name: "${project.name}", address: "${project.address}", DateOfChange: datetime("${project.date}")})
+          ${floorList}
+          ${commentList}
+          `)
+    
+    
+          await Promise.all(project.routers.map(async x=>{
+            let floorId = x.floor
+            let r = x.router
+            return this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
+              CREATE (f) <-[:ROUTER]- (r:Router {id: ${r.id},
+               x:${r.x},
+               y:${r.y},
+               name:"${r.name}",
+               model:"${r.model}"
+               })
+            `)
+          })
+          )
+    
+          return Promise.all(project.cables.map(x=>{
+            let floorId = x.floor
+            let c = x.cable
+            return this.neo4jService.write(`MATCH (p:Project {id: ${project.id}})-[:FLOOR]-(f:Floor {number: ${floorId}})
+              MATCH (f)-[:ROUTER]-(r1:Router {id:${c.start}})
+              MATCH (f)-[:ROUTER]-(r2:Router {id:${c.end}})
+              CREATE (f) <-[:CABLE]- (r:Cable {
+               len: ${c.len},
+               model: "${c.model}"
+               })
+               CREATE (r1)-[:CONNECTED]->(r)
+               CREATE (r2)-[:CONNECTED]->(r)
+            `)
+          })
+          )
         })
       )
       return response.status(201).json({})
     }
     catch(e){
+      console.log(e)
       return response.status(500).json({})
     }
   }
@@ -641,7 +682,7 @@ export class AppController {
     let history = []
 
     const res = await this.neo4jService.read(`
-    match (p:Project {id: 1703354551051}) 
+    match (p:Project {id: ${id}}) 
     optional match (p)-[:HISTORY]->(p2:Project)
     return p2
     `)
