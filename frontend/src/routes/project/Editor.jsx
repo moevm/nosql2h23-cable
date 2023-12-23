@@ -424,12 +424,26 @@ class Editor{
         this.tool = tool
     }
 
-    setSelected(id){
+    setSelected(c){
 
-        if(!this.selectedComponent || id!==this.selectedComponent.id) {
-            this.changeSelection(this.components.find(x => x.id === id))
-            this.draw()
+        if(c.type==="router"){
+            if(!this.selectedComponent || c!==this.selectedComponent) {
+                this.changeSelection(this.components.find(x => x.id === c.id))
+                this.camerapos = {x:this.selectedComponent.pos.x,y:this.selectedComponent.pos.y}
+                this.draw()
+            }
         }
+        else{
+            if(!this.selectedComponent || c!==this.selectedComponent) {
+                this.changeSelection(this.cables.find(x => x.start === c.start && x.end === c.end))
+                let comp1 = this.components.find(x=>x.id === c.start)
+                let comp2 = this.components.find(x=>x.id === c.end)
+                this.camerapos = {x:(comp1.pos.x+comp2.pos.x)/2, y:(comp1.pos.y+comp2.pos.y)/2}
+
+                this.draw()
+            }
+        }
+
     }
 
     removeSelected(){
@@ -464,13 +478,15 @@ class Editor{
         }
     }
     setPlan(data){
-        if(!this.plan)
+        //if(!this.plan)
             this.plan = new Image()
         this.plan.src = data
+        console.log("plan loaded")
+        this.camerapos = {x:this.plan.width/2,y:this.plan.height/2}
+        this.zoom = Math.min(this.canvas.width/this.plan.width,this.canvas.height/this.plan.height )
+        this.draw()
         setTimeout(()=> {
-            this.camerapos = {x:this.plan.width/2,y:this.plan.height/2}
-            this.zoom = Math.min(this.canvas.width/this.plan.width,this.canvas.height/this.plan.height )
-            this.draw()
+
         },10)
 
     }
@@ -514,7 +530,7 @@ export default function ({data,onSelection,onChange,selectedExt}){
 
         }
 
-        editor.setPlan(floorSvg);
+
 
         editor.selectionCallback = (e)=>{
             setSelected(e)
@@ -534,7 +550,7 @@ export default function ({data,onSelection,onChange,selectedExt}){
 
     useEffect(()=>{
         if(editor && selectedExt) {
-            editor.setSelected(selectedExt.id)
+            editor.setSelected(selectedExt)
         }
         setSelected(selectedExt)
     },[selectedExt])
@@ -556,6 +572,11 @@ export default function ({data,onSelection,onChange,selectedExt}){
 
     return (
         <div className={"flex flex-col w-full h-full"}>
+            <img
+                style={{display:"none"}}
+                src={floorSvg}
+                onLoad={(e) =>  editor.setPlan(e.currentTarget.src)}
+            />
             <div className={"flex justify-start w-full light-panel-bg"}>
                 <button onClick={()=>toolChangeHandler(0)}
                     style={{backgroundColor:tool===0? "#9393ff":"#F8F8F8"}}

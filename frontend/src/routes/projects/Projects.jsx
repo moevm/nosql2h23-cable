@@ -166,9 +166,11 @@ function Projects() {
                                 <span style={{flex: "20%"}}>Кол-во комментариев</span>
                                 <div style={{flex: "5%"}}/>
                             </div>
+                            <div className={"overflow-y-scroll"}>
                             {data && data.projects.map((x,i)=>
                                 <ProjectEntry number={i+1} data={x} checked={!!selected.find(y=>y===x.id)} checkboxes={checkboxesVisible} checkboxHandler={checkboxHandler}/>
                             )}
+                            </div>
                         </div>
 
                     </div>
