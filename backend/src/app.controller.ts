@@ -577,4 +577,28 @@ export class AppController {
       return response.status(500).json({})
     }
   }
+
+  @Get("/project/:id/history")
+  async getHistory(@Param('id') id): Promise<any>
+  {
+    let history = []
+
+    const res = await this.neo4jService.read(`
+    match (p:Project {id: 1703354551051}) 
+    optional match (p)-[:HISTORY]->(p2:Project)
+    return p2
+    `)
+
+    history = res.records.map(x=>{
+      let props = x.get('p2').properties
+      return {
+        date: props.DateOfChange.toStandardDate(),
+        id: props.id
+      }
+    })
+
+    return {
+      history: history
+    }
+  }
 }
