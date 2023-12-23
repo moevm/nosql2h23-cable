@@ -103,7 +103,7 @@ export class AppController {
     }
 
     const response = await this.neo4jService.read(`
-    OPTIONAL MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
+    MATCH (n:Project)<-[f:FLOOR]-(c:Floor) WITH n, count(c) as countFloor 
     OPTIONAL MATCH (n)<-[k:COMMENT]-(b:Comment) with n, countFloor, count(b) as countComment 
     where not (n)<-[:HISTORY]-()
     ${whereStr}
@@ -112,7 +112,7 @@ export class AppController {
 
     const projectList = response.records
 
-
+    console.log(projectList)
     return {
       page: 1,
       total: projectList.length,
@@ -271,7 +271,7 @@ export class AppController {
         return {
           ...props,
           comment_id: props.comment_id.toNumber(),
-          comment_date: props.comment_date.toStandardDate()
+          comment_date: props.comment_date
         }
       })
 
@@ -658,7 +658,8 @@ export class AppController {
       await Promise.all(
         deleteList.map(id => {
           return this.neo4jService.write(
-            `match (p:Project {id: ${id}})-[:HISTORY*]-(dp:Project)
+            `match (p:Project {id: ${id}})
+            optional match (p)-[:HISTORY*]-(dp:Project)
             call {
                 with dp
                 optional match (dp)-[:FLOOR|COMMENT]-(t)
@@ -677,6 +678,7 @@ export class AppController {
     }
   }
 
+
   @Get("/project/:id/history")
   async getHistory(@Param('id') id): Promise<any>
   {
@@ -684,7 +686,7 @@ export class AppController {
 
     const res = await this.neo4jService.read(`
     match (p:Project {id: ${id}}) 
-    optional match (p)-[:HISTORY]->(p2:Project)
+    match (p)-[:HISTORY]->(p2:Project)
     return p2
     `)
 
