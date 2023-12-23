@@ -112,7 +112,6 @@ export class AppController {
 
     const projectList = response.records
 
-    console.log(projectList)
     return {
       page: 1,
       total: projectList.length,
