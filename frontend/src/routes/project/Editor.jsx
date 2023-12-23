@@ -4,6 +4,8 @@ import cableSvg from "../../assets/cable.svg";
 import deleteSvg from "../../assets/delete.svg";
 import planSvg from "../../assets/plan.svg";
 import cursorSvg from "../../assets/cursor.svg";
+import floorSvg from "../../assets/2.svg";
+import {useParams} from "react-router-dom";
 let editor
 
 class Editor{
@@ -11,6 +13,7 @@ class Editor{
         this.mousePressed = false
         this.cableStarted = undefined
         this.grabOffset = {x:0,y:0}
+        this.startCoord={x:0,y:0}
         this.selectedComponent = undefined
         this.areaSelectionCallback=undefined
         this.selectionCallback=undefined
@@ -20,6 +23,9 @@ class Editor{
         this.plan = undefined
         this.components=[]
         this.cables=[]
+        this.camerapos={x:0,y:0}
+        this.zoom=1
+
     }
 
     initCanvas(canvas){
@@ -37,7 +43,25 @@ class Editor{
         this.canvas.addEventListener('mousemove',(e)=>this.mousemove(e))
         this.canvas.addEventListener('contextmenu',(e)=>this.mouseright(e))
         window.addEventListener('resize',(e)=>this.resize())
+        this.canvas.addEventListener('wheel',(e)=>this.mousewheel(e))
     }
+
+    mousewheel(e){
+        let delta = e.deltaY
+        if(delta<0){
+            this.zoom*=1.1
+        }
+        if(delta>0){
+            this.zoom/=1.1
+        }
+        //console.log(this.zoom)
+        let pos = this.toSpace(this.getCanvasCoordinates(e))
+        let a= -0.1*Math.sign(delta)
+        this.camerapos = {x:this.camerapos.x+ (pos.x-this.camerapos.x)*a, y:this.camerapos.y + (pos.y-this.camerapos.y)*a}
+        //console.log(this.camerapos,pos)
+        this.draw()
+    }
+
     resize(){
        // console.log("resize")
         //
@@ -56,11 +80,13 @@ class Editor{
         }
         this.selectedComponent = component
         if(this.selectionCallback){
+            //console.log(component)
             this.selectionCallback(component)
         }
         if(this.areaSelectionCallback){
             this.areaSelectionCallback( this.selectionArray)
         }
+       // console.log(this.selectionArray)
 
     }
 
@@ -80,9 +106,10 @@ class Editor{
     }
 
     mousedown(e){
-        let pos = this.getCanvasCoordinates(e)
+        let pos = this.toSpace(this.getCanvasCoordinates(e))
         if(this.mousePressed ) return
         this.mousePressed = true
+        this.startCoord=this.getCanvasCoordinates(e)
         if(this.tool===0){
             this.cableStarted=undefined
             let c = this.getElementNearPos(pos, 10)
@@ -116,7 +143,7 @@ class Editor{
         }
         else if (this.tool===2)
         {
-            console.log('cable')
+            //console.log('cable')
             let c = this.getElementNearPos(pos, 15)
             if(c && this.cableStarted !== undefined && c !== this.cableStarted)
             {
@@ -136,13 +163,31 @@ class Editor{
     }
     mouseup(e)
     {
-        this.mousePressed = false
-        this.selectionArea=undefined
-        this.draw()
+        let pos = this.getCanvasCoordinates(e)
+        if(this.mousePressed) {
+            this.mousePressed = false
+            this.selectionArea = undefined
+            if (this.selectedComponent &&
+                (Math.abs(this.startCoord.x-pos.x)>1 || Math.abs(this.startCoord.y-pos.y)>1) &&
+                this.selectedComponent.type !== "cable") {
+                if (this.componentsCallback) {
+                    /*this.componentsCallback({
+                        components: this.components.map(x => {
+                            return {...x, pos: {x: x.pos.x, y: x.pos.y}}
+                        }), cables: this.cables
+                    }) */
+                   // console.log("called")
+                    this.componentsCallback({action: "set", component: {...this.selectedComponent}})
+                }
+            }
+
+            this.draw()
+        }
     }
     mousemove(e)
     {
-        let pos = this.getCanvasCoordinates(e)
+        let screenpos = this.getCanvasCoordinates(e)
+        let pos = this.toSpace(screenpos)
 
         if(this.mousePressed){
            // this.ctx.fillStyle = 'red';
@@ -177,8 +222,9 @@ class Editor{
             this.draw()
             this.ctx.lineWidth = 4;
             this.ctx.beginPath();
-            this.ctx.moveTo(this.cableStarted.pos.x,this.cableStarted.pos.y)
-            this.ctx.lineTo(pos.x,pos.y)
+            let pos1 = this.toView(this.cableStarted.pos)
+            this.ctx.moveTo(pos1.x,pos1.y)
+            this.ctx.lineTo(screenpos.x,screenpos.y)
 
             this.ctx.strokeStyle='#ff2e2e'
             this.ctx.stroke();
@@ -203,13 +249,19 @@ class Editor{
     }
 
     addComponent(pos){
-        this.components.push({
+        let id=this.newId()
+        let r = {
             type:"router",
-            id: this.newId(),
+            name:`Маршрутизатор №${id}`,
+            model:"default",
+            id: id,
             pos: pos
-        })
+        }
+        this.components.push(r)
         if(this.componentsCallback){
-            this.componentsCallback({components:this.components,cables:this.cables})
+            //this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
+            this.componentsCallback({action:"add",component:{...r}})
+           // console.log(this.components)
         }
 
         this.draw()
@@ -217,53 +269,93 @@ class Editor{
 
     addCable(comp1,comp2){
 
-        this.cables.push({
+        let r = {
             type:"cable",
+            len: 0,
+            model:"default",
             start:comp1.id,
             end:comp2.id
-        })
+        }
+        this.cables.push(r)
         if(this.componentsCallback){
-            this.componentsCallback({components:this.components,cables:this.cables})
+            //this.componentsCallback({components:this.components.map(x=>{return {...x,pos:{x:x.pos.x/this.canvas.width,y:x.pos.y/this.canvas.height}}}),cables:this.cables})
+            this.componentsCallback({action:"add",component:{...r}})
         }
         this.draw()
     }
 
+    toView(pos){
+        let rel = {x: pos.x - this.camerapos.x, y: pos.y - this.camerapos.y}
+        rel = {x:rel.x*this.zoom,y:rel.y*this.zoom}
+        return {x:rel.x + this.canvas.width/2,y:rel.y + this.canvas.height/2}
+    }
+    toSpace(pos){
+        let rel = {x:pos.x - this.canvas.width/2,y: pos.y - this.canvas.height/2}
+        rel = {x:rel.x/this.zoom,y:rel.y/this.zoom}
+        return {x: rel.x + this.camerapos.x, y: rel.y + this.camerapos.y}
+    }
+
     drawComponent(c){
+
+        let pos = this.toView(c.pos)
+
         if(this.selectionArray.find(x=>x === c))
         {
             this.ctx.fillStyle = 'black';
             this.ctx.beginPath();
-            this.ctx.arc(c.pos.x, c.pos.y, 12, 0, 2 * Math.PI , true);
+            this.ctx.arc(pos.x, pos.y, 12*this.zoom, 0, 2 * Math.PI , true);
             this.ctx.fill();
         }
         this.ctx.fillStyle = '#39c013';
         this.ctx.beginPath();
-        this.ctx.arc(c.pos.x, c.pos.y, 10, 0, 2 * Math.PI , true);
+        this.ctx.arc(pos.x, pos.y, 10*this.zoom, 0, 2 * Math.PI , true);
         this.ctx.fill();
     }
 
     drawCable(c){
 
+
         let comp1 = this.components.find(x=>x.id === c.start)
         let comp2 = this.components.find(x=>x.id === c.end)
+        let pos1 = this.toView(comp1.pos)
+        let pos2 = this.toView(comp2.pos)
         if(this.selectionArray.find(x=>x === c)) {
             this.ctx.lineWidth = 8;
             this.ctx.beginPath();
-            this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
-            this.ctx.lineTo(comp2.pos.x,comp2.pos.y)
+            this.ctx.moveTo(pos1.x,pos1.y)
+            this.ctx.lineTo(pos2.x,pos2.y)
 
             this.ctx.strokeStyle='black'
             this.ctx.stroke();
         }
         this.ctx.lineWidth = 4;
         this.ctx.beginPath();
-        this.ctx.moveTo(comp1.pos.x,comp1.pos.y)
-        this.ctx.lineTo(comp2.pos.x,comp2.pos.y)
+        this.ctx.moveTo(pos1.x,pos1.y)
+        this.ctx.lineTo(pos2.x,pos2.y)
 
         this.ctx.strokeStyle='#ff2e2e'
         this.ctx.stroke();
     }
+    drawGrid(){
+        this.ctx.lineWidth = 1;
+        this.cnt = this.toSpace({x:this.canvas.width,y:this.canvas.height}).x
+        for(let x= 0;x<Math.ceil(this.cnt/10)*10;x+=1) {
+            let pos1 = this.toView({x:Math.floor(x+this.camerapos.x), y: Math.floor(x+this.camerapos.y)})
+            this.ctx.beginPath();
+            this.ctx.moveTo(pos1.x - this.canvas.width/2, 0)
+            this.ctx.lineTo(pos1.x - this.canvas.width/2, this.canvas.height)
 
+            this.ctx.strokeStyle = '#b9b9b9'
+            this.ctx.stroke();
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, pos1.y - this.canvas.height/2)
+            this.ctx.lineTo(this.canvas.width, pos1.y- this.canvas.height/2)
+
+            this.ctx.strokeStyle = '#b9b9b9'
+            this.ctx.stroke();
+        }
+    }
     draw(){
 
         if(!this.plan){
@@ -272,21 +364,30 @@ class Editor{
         }
         else
         {
+
             this.ctx.fillStyle = '#F8F8F8';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            let pos1 = this.toView({x:0,y:0})
+            this.ctx.drawImage(this.plan, pos1.x, pos1.y,this.plan.width*this.zoom ,this.plan.height*this.zoom )
+
+            /*
             let imgaspect = this.plan.width/this.plan.height
             let canvasaspect = this.canvas.width/this.canvas.height
 
             if(imgaspect<canvasaspect){
                 let x = this.canvas.width/2-this.canvas.height*imgaspect/2
-                this.ctx.drawImage(this.plan,x, 0, this.canvas.height*imgaspect, this.canvas.height)
+                let pos1 = this.toView({x:x,y:0})
+                this.ctx.drawImage(this.plan,pos1.x, pos1.y, this.canvas.height*imgaspect*this.zoom, this.canvas.height*this.zoom)
             }
             else{
-                let y = this.canvas.height/2-this.canvas.width/imgaspect/2
-                this.ctx.drawImage(this.plan,0, y, this.canvas.width, this.canvas.width/imgaspect)
-            }
 
+                let y = this.canvas.height/2-this.canvas.width/imgaspect/2
+                let pos2 = this.toView({x:0,y:y})
+                this.ctx.drawImage(this.plan,pos2.x, pos2.y, this.canvas.width*this.zoom, this.canvas.width/imgaspect*this.zoom)
+            }
+*/
         }
+        //this.drawGrid()
         for(let cable of this.cables){
             this.drawCable(cable)
         }
@@ -295,10 +396,12 @@ class Editor{
         }
         if(this.selectionArea){
             this.ctx.fillStyle = 'rgba(147,147,255,0.49)';
-            this.ctx.fillRect(this.selectionArea.start.x,
-                this.selectionArea.start.y,
-                -this.selectionArea.start.x+this.selectionArea.end.x,
-                -this.selectionArea.start.y+this.selectionArea.end.y);
+            let pos1 = this.toView(this.selectionArea.start)
+            let pos2 = this.toView(this.selectionArea.end)
+            this.ctx.fillRect(pos1.x,
+                pos1.y,
+                -pos1.x+pos2.x,
+                -pos1.y+pos2.y);
         }
 
     }
@@ -321,16 +424,39 @@ class Editor{
         this.tool = tool
     }
 
+    setSelected(c){
+
+        if(c.type==="router"){
+            if(!this.selectedComponent || c!==this.selectedComponent) {
+                this.changeSelection(this.components.find(x => x.id === c.id))
+                this.camerapos = {x:this.selectedComponent.pos.x,y:this.selectedComponent.pos.y}
+                this.draw()
+            }
+        }
+        else{
+            if(!this.selectedComponent || c!==this.selectedComponent) {
+                this.changeSelection(this.cables.find(x => x.start === c.start && x.end === c.end))
+                let comp1 = this.components.find(x=>x.id === c.start)
+                let comp2 = this.components.find(x=>x.id === c.end)
+                this.camerapos = {x:(comp1.pos.x+comp2.pos.x)/2, y:(comp1.pos.y+comp2.pos.y)/2}
+
+                this.draw()
+            }
+        }
+
+    }
+
     removeSelected(){
         this.components=this.components.filter(x => !this.selectionArray.includes(x))
         this.cables=this.cables.filter(x => !this.selectionArray.find(y=> y.id===x.start ||  y.id===x.end || x===y))
-        this.selectionArray=[]
+
         if(this.areaSelectionCallback){
             this.areaSelectionCallback(this.selectionArray)
         }
         if(this.componentsCallback){
-            this.componentsCallback({components:this.components,cables:this.cables})
+            this.componentsCallback({action: "del", components: this.selectionArray})
         }
+        this.selectionArray=[]
         this.draw()
     }
 
@@ -352,37 +478,47 @@ class Editor{
         }
     }
     setPlan(data){
-        if(!this.plan)
+        //if(!this.plan)
             this.plan = new Image()
         this.plan.src = data
-        setTimeout(()=> this.draw(),10)
+        console.log("plan loaded")
+        this.camerapos = {x:this.plan.width/2,y:this.plan.height/2}
+        this.zoom = Math.min(this.canvas.width/this.plan.width,this.canvas.height/this.plan.height )
+        this.draw()
+        setTimeout(()=> {
+
+        },10)
 
     }
 
-    loadFloor({components,cables}){
-        this.cables=cables
-        this.components=components
+    loadFloor({components}){
+        let copy = components.map(x=>{return {...x}})
+        this.cables = copy.filter(x=>x.type === "cable")
+        this.components = copy.filter(x=>x.type !== "cable")
+        this.draw()
     }
 
 }
 
 function Hint({text}){
     return (
-            <div className={"panel-bg absolute px-2 py-1 hint"}>
+            <span className={"panel-bg absolute px-2 py-1 hint whitespace-nowrap"}>
                 {text}
-            </div>
+            </span>
     )
 }
 
 
 
 
-export default function ({data,onSelection,onChange}){
+export default function ({data,onSelection,onChange,selectedExt}){
+    const {fid}=useParams()
     const canvasRef = useRef(null)
     const planInputRef = useRef(null)
     const [tool,setTool] = useState(0)
     const [deleteVisible,SetDeleteVisible] = useState(false)
     const [selected,setSelected] = useState()
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if(!editor){
@@ -391,9 +527,11 @@ export default function ({data,onSelection,onChange}){
             //editor.draw()
         }
         else{
-            console.log('exists')
-            console.log(canvas)
+
         }
+
+
+
         editor.selectionCallback = (e)=>{
             setSelected(e)
             onSelection(e)
@@ -404,10 +542,18 @@ export default function ({data,onSelection,onChange}){
         }
         editor.initCanvas(canvas)
         editor.setTool(tool)
-
-
+        if(data){
+            editor.loadFloor(data)
+        }
 
     }, []);
+
+    useEffect(()=>{
+        if(editor && selectedExt) {
+            editor.setSelected(selectedExt)
+        }
+        setSelected(selectedExt)
+    },[selectedExt])
 
     const toolChangeHandler = (e)=>{
         setTool(e)
@@ -426,6 +572,11 @@ export default function ({data,onSelection,onChange}){
 
     return (
         <div className={"flex flex-col w-full h-full"}>
+            <img
+                style={{display:"none"}}
+                src={floorSvg}
+                onLoad={(e) =>  editor.setPlan(e.currentTarget.src)}
+            />
             <div className={"flex justify-start w-full light-panel-bg"}>
                 <button onClick={()=>toolChangeHandler(0)}
                     style={{backgroundColor:tool===0? "#9393ff":"#F8F8F8"}}
@@ -448,11 +599,11 @@ export default function ({data,onSelection,onChange}){
                     <img src={deleteSvg} alt={"Удалить"}/>
                     <Hint text={"Удалить"}/>
                 </button>}
-                <button onClick={(e)=>planInputRef.current.click()}
+                <button /*onClick={(e)=>planInputRef.current.click()}*/
                     className={"editor-button flex justify-center items-center hint-button"}>
                     <img className={"w-3/4"} src={planSvg} alt={"План"}/>
                     <input ref={planInputRef} onChange={fileChangeHandler} className={"hidden"} type={"file"}/>
-                    <Hint text={"План"}/>
+                    <Hint text={"План (Пока не доступно)"}/>
                 </button>
             </div>
 
